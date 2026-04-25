@@ -18,16 +18,18 @@ struct ElectronicMoneyTabView: View {
         NavigationStack {
             Group {
                 if cards.isEmpty {
-                    ContentUnavailableView(
-                        "先にカードを登録してください",
+                    SampleDataContentUnavailableView(
+                        title: "先にカードを登録してください",
                         systemImage: "creditcard",
-                        description: Text("電子マネーはカードに紐付きます。銀行、カードの順で登録してください。")
+                        description: "電子マネーはカードに紐付きます。銀行、カードの順で登録してください。",
+                        addSampleData: addSampleData
                     )
                 } else if electronicMoneys.isEmpty {
-                    ContentUnavailableView(
-                        "電子マネーがまだありません",
+                    SampleDataContentUnavailableView(
+                        title: "電子マネーがまだありません",
                         systemImage: "iphone.gen3",
-                        description: Text("右上の追加ボタンから登録できます。")
+                        description: "右上の追加ボタンから登録できます。",
+                        addSampleData: addSampleData
                     )
                 } else {
                     List {
@@ -67,6 +69,10 @@ struct ElectronicMoneyTabView: View {
 
     private var displayedElectronicMoneys: [ElectronicMoney] {
         electronicMoneys.sortedForDisplay()
+    }
+
+    private func addSampleData() {
+        SampleDataSeeder.seed(in: modelContext)
     }
 }
 

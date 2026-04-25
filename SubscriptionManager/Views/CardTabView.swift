@@ -18,16 +18,18 @@ struct CardTabView: View {
         NavigationStack {
             Group {
                 if banks.isEmpty {
-                    ContentUnavailableView(
-                        "先に銀行を登録してください",
+                    SampleDataContentUnavailableView(
+                        title: "先に銀行を登録してください",
                         systemImage: "building.columns",
-                        description: Text("カードは銀行に紐付きます。まず銀行を追加してください。")
+                        description: "カードは銀行に紐付きます。まず銀行を追加してください。",
+                        addSampleData: addSampleData
                     )
                 } else if cards.isEmpty {
-                    ContentUnavailableView(
-                        "カードがまだありません",
+                    SampleDataContentUnavailableView(
+                        title: "カードがまだありません",
                         systemImage: "creditcard",
-                        description: Text("右上の追加ボタンから登録できます。")
+                        description: "右上の追加ボタンから登録できます。",
+                        addSampleData: addSampleData
                     )
                 } else {
                     List {
@@ -67,6 +69,10 @@ struct CardTabView: View {
 
     private var displayedCards: [Card] {
         cards.sortedForDisplay()
+    }
+
+    private func addSampleData() {
+        SampleDataSeeder.seed(in: modelContext)
     }
 }
 

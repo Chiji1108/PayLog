@@ -20,16 +20,18 @@ struct SubscriptionTabView: View {
         NavigationStack {
             Group {
                 if !hasPaymentMethods {
-                    ContentUnavailableView(
-                        "先に支払い方法を登録してください",
+                    SampleDataContentUnavailableView(
+                        title: "先に支払い方法を登録してください",
                         systemImage: "wallet.bifold",
-                        description: Text("サブスクはカードまたは銀行口座に紐付きます。先に登録してください。")
+                        description: "サブスクはカードまたは銀行口座に紐付きます。先に登録してください。",
+                        addSampleData: addSampleData
                     )
                 } else if subscriptions.isEmpty {
-                    ContentUnavailableView(
-                        "サブスクがまだありません",
+                    SampleDataContentUnavailableView(
+                        title: "サブスクがまだありません",
                         systemImage: "repeat.circle",
-                        description: Text("右上の追加ボタンから登録できます。")
+                        description: "右上の追加ボタンから登録できます。",
+                        addSampleData: addSampleData
                     )
                 } else {
                     List {
@@ -129,6 +131,10 @@ struct SubscriptionTabView: View {
 
     private var totalAmountText: String {
         totalAmount.formatted(.currency(code: "JPY").precision(.fractionLength(0)))
+    }
+
+    private func addSampleData() {
+        SampleDataSeeder.seed(in: modelContext)
     }
 }
 

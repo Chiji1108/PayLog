@@ -17,10 +17,11 @@ struct BankTabView: View {
         NavigationStack {
             Group {
                 if banks.isEmpty {
-                    ContentUnavailableView(
-                        "銀行がまだありません",
+                    SampleDataContentUnavailableView(
+                        title: "銀行がまだありません",
                         systemImage: "building.columns",
-                        description: Text("最初に銀行を登録すると、次にカードやサブスクを紐付けできます。")
+                        description: "最初に銀行を登録すると、次にカードやサブスクを紐付けできます。",
+                        addSampleData: addSampleData
                     )
                 } else {
                     List {
@@ -59,6 +60,10 @@ struct BankTabView: View {
 
     private var displayedBanks: [Bank] {
         banks.sortedForDisplay()
+    }
+
+    private func addSampleData() {
+        SampleDataSeeder.seed(in: modelContext)
     }
 }
 
