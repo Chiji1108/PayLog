@@ -39,6 +39,8 @@ struct ElectronicMoneyEditorView: View {
 
                 Section("チャージ元カード") {
                     Picker("カード", selection: $selectedCard) {
+                        Text("未設定").tag(nil as Card?)
+
                         ForEach(cards) { card in
                             Text(card.name).tag(card as Card?)
                         }
@@ -72,10 +74,6 @@ struct ElectronicMoneyEditorView: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
-                        guard let selectedCard else {
-                            return
-                        }
-
                         if let electronicMoney {
                             electronicMoney.name = trimmedName
                             electronicMoney.notes = trimmedNotes
@@ -92,11 +90,8 @@ struct ElectronicMoneyEditorView: View {
                         }
                         dismiss()
                     }
-                    .disabled(trimmedName.isEmpty || selectedCard == nil)
+                    .disabled(trimmedName.isEmpty)
                 }
-            }
-            .onAppear {
-                selectedCard = selectedCard ?? cards.first
             }
             .confirmationDialog(
                 "この電子マネーを削除しますか？",

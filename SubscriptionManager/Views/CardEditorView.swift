@@ -47,6 +47,8 @@ struct CardEditorView: View {
 
                 Section("引き落とし口座") {
                     Picker("銀行", selection: $selectedBank) {
+                        Text("未設定").tag(nil as Bank?)
+
                         ForEach(banks) { bank in
                             Text(bank.name).tag(bank as Bank?)
                         }
@@ -80,10 +82,6 @@ struct CardEditorView: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
-                        guard let selectedBank else {
-                            return
-                        }
-
                         if let card {
                             card.name = trimmedName
                             card.lastFourDigits = trimmedLastFourDigits
@@ -104,11 +102,8 @@ struct CardEditorView: View {
                         }
                         dismiss()
                     }
-                    .disabled(trimmedName.isEmpty || selectedBank == nil)
+                    .disabled(trimmedName.isEmpty)
                 }
-            }
-            .onAppear {
-                selectedBank = selectedBank ?? banks.first
             }
             .confirmationDialog(
                 "このカードを削除しますか？",
@@ -128,7 +123,7 @@ struct CardEditorView: View {
                 Button("キャンセル", role: .cancel) {
                 }
             } message: {
-                Text("紐付いているサブスクや電子マネーも削除されます。")
+                Text("紐付いているサブスクや電子マネーのカード設定は未設定になります。")
             }
         }
     }

@@ -67,6 +67,8 @@ struct SubscriptionEditorView: View {
                                 .foregroundStyle(.secondary)
                         } else {
                             Picker("カード", selection: $selectedCard) {
+                                Text("未設定").tag(nil as Card?)
+
                                 ForEach(cards) { card in
                                     Text(card.name).tag(card as Card?)
                                 }
@@ -78,6 +80,8 @@ struct SubscriptionEditorView: View {
                                 .foregroundStyle(.secondary)
                         } else {
                             Picker("銀行口座", selection: $selectedBank) {
+                                Text("未設定").tag(nil as Bank?)
+
                                 ForEach(banks) { bank in
                                     Text(bank.name).tag(bank as Bank?)
                                 }
@@ -120,10 +124,6 @@ struct SubscriptionEditorView: View {
                         let selectedCard = paymentMethod == .card ? selectedCard : nil
                         let selectedBank = paymentMethod == .bankAccount ? selectedBank : nil
 
-                        guard selectedCard != nil || selectedBank != nil else {
-                            return
-                        }
-
                         if let subscription {
                             subscription.name = trimmedName
                             subscription.amount = amount
@@ -148,14 +148,8 @@ struct SubscriptionEditorView: View {
                         }
                         dismiss()
                     }
-                    .disabled(trimmedName.isEmpty || !hasValidAmount || !hasValidPaymentMethod)
+                    .disabled(trimmedName.isEmpty || !hasValidAmount)
                 }
-            }
-            .onAppear {
-                applyDefaultPaymentSelection(for: paymentMethod)
-            }
-            .onChange(of: paymentMethod) { _, newValue in
-                applyDefaultPaymentSelection(for: newValue)
             }
             .confirmationDialog(
                 "このサブスクを削除しますか？",
@@ -197,23 +191,6 @@ struct SubscriptionEditorView: View {
         return amount > 0
     }
 
-    private var hasValidPaymentMethod: Bool {
-        switch paymentMethod {
-        case .card:
-            selectedCard != nil
-        case .bankAccount:
-            selectedBank != nil
-        }
-    }
-
-    private func applyDefaultPaymentSelection(for paymentMethod: SubscriptionPaymentMethod) {
-        switch paymentMethod {
-        case .card:
-            selectedCard = selectedCard ?? cards.first
-        case .bankAccount:
-            selectedBank = selectedBank ?? banks.first
-        }
-    }
 }
 
 #Preview("Subscription Editor", traits: .sampleData) {

@@ -107,7 +107,7 @@ struct BankEditorView: View {
                 Button("キャンセル", role: .cancel) {
                 }
             } message: {
-                Text("紐付いているカードや関連データも削除されます。")
+                Text("紐付いているカードや口座振替の設定は未設定になります。")
             }
         }
     }

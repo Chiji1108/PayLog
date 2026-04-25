@@ -17,8 +17,8 @@ final class Card {
     var isActive: Bool
     var createdAt: Date
     var bank: Bank?
-    @Relationship(deleteRule: .cascade, inverse: \ElectronicMoney.card) var electronicMoneys: [ElectronicMoney]?
-    @Relationship(deleteRule: .cascade, inverse: \SubscriptionItem.card) var subscriptions: [SubscriptionItem]?
+    @Relationship(deleteRule: .nullify, inverse: \ElectronicMoney.card) var electronicMoneys: [ElectronicMoney]?
+    @Relationship(deleteRule: .nullify, inverse: \SubscriptionItem.card) var subscriptions: [SubscriptionItem]?
 
     init(
         name: String,
