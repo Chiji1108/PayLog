@@ -11,6 +11,7 @@ import SwiftData
 struct SubscriptionTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Card.name) private var cards: [Card]
+    @Query(sort: \Bank.name) private var banks: [Bank]
     @Query(sort: \SubscriptionItem.name) private var subscriptions: [SubscriptionItem]
     @State private var showingAddSheet = false
     @State private var selectedFilter: SubscriptionFilter = .monthly
@@ -18,11 +19,11 @@ struct SubscriptionTabView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if cards.isEmpty {
+                if !hasPaymentMethods {
                     ContentUnavailableView(
-                        "先にカードを登録してください",
-                        systemImage: "creditcard",
-                        description: Text("サブスクはカードに紐付きます。銀行、カードの順で登録してください。")
+                        "先に支払い方法を登録してください",
+                        systemImage: "wallet.bifold",
+                        description: Text("サブスクはカードまたは銀行口座に紐付きます。先に登録してください。")
                     )
                 } else if subscriptions.isEmpty {
                     ContentUnavailableView(
@@ -60,6 +61,17 @@ struct SubscriptionTabView: View {
                 }
             }
             .navigationTitle("サブスク")
+            .floatingBadge {
+                if !filteredSubscriptions.isEmpty {
+                    FloatingBadge {
+                        HStack(spacing: 8) {
+                            Text(selectedFilter.totalLabel)
+
+                            Text(totalAmountText)
+                        }
+                    }
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Picker("請求サイクル", selection: $selectedFilter) {
@@ -77,13 +89,17 @@ struct SubscriptionTabView: View {
                     } label: {
                         Label("サブスクを追加", systemImage: "plus")
                     }
-                    .disabled(cards.isEmpty)
+                    .disabled(!hasPaymentMethods)
                 }
             }
             .sheet(isPresented: $showingAddSheet) {
                 SubscriptionEditorView()
             }
         }
+    }
+
+    private var hasPaymentMethods: Bool {
+        !cards.isEmpty || !banks.isEmpty
     }
 
     private func deleteSubscriptions(offsets: IndexSet) {
@@ -103,6 +119,16 @@ struct SubscriptionTabView: View {
         }
 
         return matchingSubscriptions.sortedForDisplay()
+    }
+
+    private var totalAmount: Int {
+        filteredSubscriptions.reduce(0) { partialResult, subscription in
+            partialResult + subscription.amount
+        }
+    }
+
+    private var totalAmountText: String {
+        totalAmount.formatted(.currency(code: "JPY").precision(.fractionLength(0)))
     }
 }
 
@@ -136,6 +162,15 @@ private enum SubscriptionFilter: String, CaseIterable, Identifiable {
             "月額サブスクを追加するとここに表示されます。"
         case .yearly:
             "年額サブスクを追加するとここに表示されます。"
+        }
+    }
+
+    var totalLabel: String {
+        switch self {
+        case .monthly:
+            "月額合計"
+        case .yearly:
+            "年額合計"
         }
     }
 }

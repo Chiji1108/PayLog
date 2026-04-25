@@ -12,15 +12,18 @@ struct SubscriptionEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Card.name) private var cards: [Card]
+    @Query(sort: \Bank.name) private var banks: [Bank]
 
     private let subscription: SubscriptionItem?
     private let onDelete: (() -> Void)?
     @State private var name = ""
     @State private var amount: Int?
     @State private var billingCycle: SubscriptionBillingCycle = .monthly
+    @State private var paymentMethod: SubscriptionPaymentMethod = .card
     @State private var notes = ""
     @State private var isActive = true
     @State private var selectedCard: Card?
+    @State private var selectedBank: Bank?
     @State private var showingDeleteConfirmation = false
 
     init(subscription: SubscriptionItem? = nil, onDelete: (() -> Void)? = nil) {
@@ -29,9 +32,11 @@ struct SubscriptionEditorView: View {
         _name = State(initialValue: subscription?.name ?? "")
         _amount = State(initialValue: subscription?.amount)
         _billingCycle = State(initialValue: subscription?.billingCycle ?? .monthly)
+        _paymentMethod = State(initialValue: subscription?.paymentMethod ?? .card)
         _notes = State(initialValue: subscription?.notes ?? "")
         _isActive = State(initialValue: subscription?.isActive ?? true)
         _selectedCard = State(initialValue: subscription?.card)
+        _selectedBank = State(initialValue: subscription?.bank)
     }
 
     var body: some View {
@@ -48,10 +53,35 @@ struct SubscriptionEditorView: View {
                         .keyboardType(.numberPad)
                 }
 
-                Section("支払いカード") {
-                    Picker("カード", selection: $selectedCard) {
-                        ForEach(cards) { card in
-                            Text(card.name).tag(card as Card?)
+                Section("支払い方法") {
+                    Picker("方法", selection: $paymentMethod) {
+                        ForEach(SubscriptionPaymentMethod.allCases) { method in
+                            Text(method.label).tag(method)
+                        }
+                    }
+
+                    switch paymentMethod {
+                    case .card:
+                        if cards.isEmpty {
+                            Text("利用可能なカードがありません")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Picker("カード", selection: $selectedCard) {
+                                ForEach(cards) { card in
+                                    Text(card.name).tag(card as Card?)
+                                }
+                            }
+                        }
+                    case .bankAccount:
+                        if banks.isEmpty {
+                            Text("利用可能な銀行口座がありません")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Picker("銀行口座", selection: $selectedBank) {
+                                ForEach(banks) { bank in
+                                    Text(bank.name).tag(bank as Bank?)
+                                }
+                            }
                         }
                     }
                 }
@@ -83,7 +113,14 @@ struct SubscriptionEditorView: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
-                        guard let selectedCard, let amount, amount > 0 else {
+                        guard let amount, amount > 0 else {
+                            return
+                        }
+
+                        let selectedCard = paymentMethod == .card ? selectedCard : nil
+                        let selectedBank = paymentMethod == .bankAccount ? selectedBank : nil
+
+                        guard selectedCard != nil || selectedBank != nil else {
                             return
                         }
 
@@ -91,27 +128,34 @@ struct SubscriptionEditorView: View {
                             subscription.name = trimmedName
                             subscription.amount = amount
                             subscription.billingCycle = billingCycle
+                            subscription.paymentMethod = paymentMethod
                             subscription.notes = trimmedNotes
                             subscription.card = selectedCard
+                            subscription.bank = selectedBank
                             subscription.isActive = isActive
                         } else {
                             let subscription = SubscriptionItem(
                                 name: trimmedName,
                                 amount: amount,
                                 billingCycle: billingCycle,
+                                paymentMethod: paymentMethod,
                                 notes: trimmedNotes,
                                 card: selectedCard,
+                                bank: selectedBank,
                                 isActive: isActive
                             )
                             modelContext.insert(subscription)
                         }
                         dismiss()
                     }
-                    .disabled(trimmedName.isEmpty || selectedCard == nil || !hasValidAmount)
+                    .disabled(trimmedName.isEmpty || !hasValidAmount || !hasValidPaymentMethod)
                 }
             }
             .onAppear {
-                selectedCard = selectedCard ?? cards.first
+                applyDefaultPaymentSelection(for: paymentMethod)
+            }
+            .onChange(of: paymentMethod) { _, newValue in
+                applyDefaultPaymentSelection(for: newValue)
             }
             .confirmationDialog(
                 "このサブスクを削除しますか？",
@@ -151,6 +195,24 @@ struct SubscriptionEditorView: View {
         }
 
         return amount > 0
+    }
+
+    private var hasValidPaymentMethod: Bool {
+        switch paymentMethod {
+        case .card:
+            selectedCard != nil
+        case .bankAccount:
+            selectedBank != nil
+        }
+    }
+
+    private func applyDefaultPaymentSelection(for paymentMethod: SubscriptionPaymentMethod) {
+        switch paymentMethod {
+        case .card:
+            selectedCard = selectedCard ?? cards.first
+        case .bankAccount:
+            selectedBank = selectedBank ?? banks.first
+        }
     }
 }
 

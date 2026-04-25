@@ -24,35 +24,69 @@ enum SubscriptionBillingCycle: String, CaseIterable, Codable, Identifiable {
     }
 }
 
+enum SubscriptionPaymentMethod: String, CaseIterable, Codable, Identifiable {
+    case card
+    case bankAccount
+
+    var id: Self { self }
+
+    var label: String {
+        switch self {
+        case .card:
+            "カード"
+        case .bankAccount:
+            "口座振替"
+        }
+    }
+}
+
 @Model
 final class SubscriptionItem {
     var name: String
     var amount: Int
     private var billingCycleRawValue: String
+    private var paymentMethodRawValue: String?
     var notes: String?
     var isActive: Bool
     var createdAt: Date
-    var card: Card
+    var card: Card?
+    var bank: Bank?
 
     var billingCycle: SubscriptionBillingCycle {
         get { SubscriptionBillingCycle(rawValue: billingCycleRawValue) ?? .monthly }
         set { billingCycleRawValue = newValue.rawValue }
     }
 
+    var paymentMethod: SubscriptionPaymentMethod {
+        get {
+            if let paymentMethodRawValue,
+               let paymentMethod = SubscriptionPaymentMethod(rawValue: paymentMethodRawValue) {
+                return paymentMethod
+            }
+
+            return bank == nil ? .card : .bankAccount
+        }
+        set { paymentMethodRawValue = newValue.rawValue }
+    }
+
     init(
         name: String,
         amount: Int,
         billingCycle: SubscriptionBillingCycle = .monthly,
+        paymentMethod: SubscriptionPaymentMethod = .card,
         notes: String? = nil,
-        card: Card,
+        card: Card? = nil,
+        bank: Bank? = nil,
         isActive: Bool = true,
         createdAt: Date = .now
     ) {
         self.name = name
         self.amount = amount
         self.billingCycleRawValue = billingCycle.rawValue
+        self.paymentMethodRawValue = paymentMethod.rawValue
         self.notes = notes
-        self.card = card
+        self.card = paymentMethod == .card ? card : nil
+        self.bank = paymentMethod == .bankAccount ? bank : nil
         self.isActive = isActive
         self.createdAt = createdAt
     }

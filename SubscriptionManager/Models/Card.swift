@@ -16,16 +16,16 @@ final class Card {
     var notes: String?
     var isActive: Bool
     var createdAt: Date
-    var bank: Bank
-    @Relationship(deleteRule: .cascade, inverse: \ElectronicMoney.card) var electronicMoneys: [ElectronicMoney] = []
-    @Relationship(deleteRule: .cascade, inverse: \SubscriptionItem.card) var subscriptions: [SubscriptionItem] = []
+    var bank: Bank?
+    @Relationship(deleteRule: .cascade, inverse: \ElectronicMoney.card) var electronicMoneys: [ElectronicMoney]?
+    @Relationship(deleteRule: .cascade, inverse: \SubscriptionItem.card) var subscriptions: [SubscriptionItem]?
 
     init(
         name: String,
         lastFourDigits: String? = nil,
         expiryDate: String? = nil,
         notes: String? = nil,
-        bank: Bank,
+        bank: Bank? = nil,
         isActive: Bool = true,
         createdAt: Date = .now
     ) {

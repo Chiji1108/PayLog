@@ -16,7 +16,11 @@ enum PreviewData {
             ElectronicMoney.self,
             SubscriptionItem.self,
         ])
-        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let configuration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: true,
+            cloudKitDatabase: .none
+        )
 
         do {
             let container = try ModelContainer(for: schema, configurations: [configuration])
@@ -67,6 +71,7 @@ enum PreviewData {
         let netflix = SubscriptionItem(name: "Netflix", amount: 1490, billingCycle: .monthly, notes: "家族で共有しています。", card: visa, createdAt: now.addingTimeInterval(-60 * 60 * 18))
         let spotify = SubscriptionItem(name: "Spotify", amount: 9800, billingCycle: .yearly, card: master, isActive: false, createdAt: now.addingTimeInterval(-60 * 60 * 12))
         let youtubePremium = SubscriptionItem(name: "YouTube Premium", amount: 1280, billingCycle: .monthly, card: master, isActive: false, createdAt: now.addingTimeInterval(-60 * 60 * 6))
+        let gymMembership = SubscriptionItem(name: "ジム会費", amount: 7980, billingCycle: .monthly, paymentMethod: .bankAccount, bank: mitsui, createdAt: now.addingTimeInterval(-60 * 60 * 3))
         let adobeCreativeCloud = SubscriptionItem(name: "Adobe Creative Cloud", amount: 72800, billingCycle: .yearly, card: visa, createdAt: now)
 
         context.insert(mitsui)
@@ -78,6 +83,7 @@ enum PreviewData {
         context.insert(netflix)
         context.insert(spotify)
         context.insert(youtubePremium)
+        context.insert(gymMembership)
         context.insert(adobeCreativeCloud)
     }
 }

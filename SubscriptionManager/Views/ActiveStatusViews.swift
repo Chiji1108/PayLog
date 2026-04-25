@@ -57,3 +57,53 @@ struct ActiveStatusRow: View {
         .padding(.vertical, 4)
     }
 }
+
+struct ActiveStatusBadge: View {
+    private let indicator: ActiveStatusIndicator
+    private let statusText: String
+
+    init(_ item: some Activatable) {
+        self.indicator = ActiveStatusIndicator(item)
+        self.statusText = item.statusText
+    }
+
+    var body: some View {
+        FloatingBadge {
+            HStack(spacing: 6) {
+                indicator
+
+                Text(statusText)
+            }
+        }
+    }
+}
+
+extension View {
+    func activeStatusBadge(_ item: some Activatable) -> some View {
+        floatingBadge {
+            ActiveStatusBadge(item)
+        }
+    }
+}
+
+private struct PreviewStatusItem: Activatable {
+    let isActive: Bool
+}
+
+#Preview("Status Indicator", traits: .sizeThatFitsLayout) {
+    ActiveStatusIndicator(PreviewStatusItem(isActive: true))
+        .padding()
+}
+
+#Preview("Status Row", traits: .sizeThatFitsLayout) {
+    ActiveStatusRow(
+        PreviewStatusItem(isActive: true),
+        title: "Netflix",
+        trailingText: "¥1,490"
+    )
+    .padding()
+}
+#Preview("Status Badge", traits: .sizeThatFitsLayout) {
+    ActiveStatusBadge(PreviewStatusItem(isActive: true))
+        .padding()
+}

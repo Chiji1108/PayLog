@@ -15,8 +15,6 @@ struct BankDetailView: View {
 
     var body: some View {
         List {
-            DetailStatusSection(bank)
-
             if bank.branchName != nil || bank.accountNumber != nil {
                 Section("口座情報") {
                     if let branchName = bank.branchName {
@@ -49,8 +47,30 @@ struct BankDetailView: View {
                     }
                 }
             }
+
+            Section("この口座から引き落とすサブスク") {
+                if sortedSubscriptions.isEmpty {
+                    Text("まだサブスクはありません")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(sortedSubscriptions) { subscription in
+                        NavigationLink {
+                            SubscriptionDetailView(subscription: subscription)
+                        } label: {
+                            ActiveStatusRow(
+                                subscription,
+                                title: subscription.name,
+                                trailingText: subscription.amount.formatted(
+                                    .currency(code: "JPY").precision(.fractionLength(0))
+                                )
+                            )
+                        }
+                    }
+                }
+            }
         }
         .navigationTitle(bank.name)
+        .activeStatusBadge(bank)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("編集") {
@@ -66,7 +86,11 @@ struct BankDetailView: View {
     }
 
     private var sortedCards: [Card] {
-        bank.cards.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        (bank.cards ?? []).sortedForDisplay()
+    }
+
+    private var sortedSubscriptions: [SubscriptionItem] {
+        (bank.subscriptions ?? []).sortedForDisplay()
     }
 }
 #Preview("Bank Detail", traits: .sampleData) {

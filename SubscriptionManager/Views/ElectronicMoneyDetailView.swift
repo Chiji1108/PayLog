@@ -15,8 +15,6 @@ struct ElectronicMoneyDetailView: View {
 
     var body: some View {
         List {
-            DetailStatusSection(electronicMoney)
-
             if let notes = electronicMoney.trimmedNotes {
                 Section("備考") {
                     Text(notes)
@@ -24,14 +22,20 @@ struct ElectronicMoneyDetailView: View {
             }
 
             Section("チャージ元カード") {
-                NavigationLink {
-                    CardDetailView(card: electronicMoney.card)
-                } label: {
-                    ActiveStatusRow(electronicMoney.card, title: electronicMoney.card.name)
+                if let card = electronicMoney.card {
+                    NavigationLink {
+                        CardDetailView(card: card)
+                    } label: {
+                        ActiveStatusRow(card, title: card.name)
+                    }
+                } else {
+                    Text("未設定")
+                        .foregroundStyle(.secondary)
                 }
             }
         }
         .navigationTitle(electronicMoney.name)
+        .activeStatusBadge(electronicMoney)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("編集") {

@@ -15,8 +15,6 @@ struct CardDetailView: View {
 
     var body: some View {
         List {
-            DetailStatusSection(card)
-
             if card.lastFourDigits != nil || card.expiryDate != nil {
                 Section("カード情報") {
                     if let lastFourDigits = card.lastFourDigits {
@@ -36,10 +34,15 @@ struct CardDetailView: View {
             }
 
             Section("引き落とし口座") {
-                NavigationLink {
-                    BankDetailView(bank: card.bank)
-                } label: {
-                    ActiveStatusRow(card.bank, title: card.bank.name)
+                if let bank = card.bank {
+                    NavigationLink {
+                        BankDetailView(bank: bank)
+                    } label: {
+                        ActiveStatusRow(bank, title: bank.name)
+                    }
+                } else {
+                    Text("未設定")
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -80,6 +83,7 @@ struct CardDetailView: View {
             }
         }
         .navigationTitle(card.name)
+        .activeStatusBadge(card)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("編集") {
@@ -95,11 +99,11 @@ struct CardDetailView: View {
     }
 
     private var sortedSubscriptions: [SubscriptionItem] {
-        card.subscriptions.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        (card.subscriptions ?? []).sortedForDisplay()
     }
 
     private var sortedElectronicMoneys: [ElectronicMoney] {
-        card.electronicMoneys.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        (card.electronicMoneys ?? []).sortedForDisplay()
     }
 }
 
