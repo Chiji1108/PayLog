@@ -15,6 +15,9 @@ struct BankEditorView: View {
     private let bank: Bank?
     private let onDelete: (() -> Void)?
     @State private var name = ""
+    @State private var branchName = ""
+    @State private var accountNumber = ""
+    @State private var notes = ""
     @State private var isActive = true
     @State private var showingDeleteConfirmation = false
 
@@ -22,17 +25,33 @@ struct BankEditorView: View {
         self.bank = bank
         self.onDelete = onDelete
         _name = State(initialValue: bank?.name ?? "")
+        _branchName = State(initialValue: bank?.branchName ?? "")
+        _accountNumber = State(initialValue: bank?.accountNumber ?? "")
+        _notes = State(initialValue: bank?.notes ?? "")
         _isActive = State(initialValue: bank?.isActive ?? true)
     }
 
     var body: some View {
         NavigationStack {
             Form {
-                TextField("銀行名", text: $name)
-                Toggle("アクティブ", isOn: $isActive)
+                Section("基本情報") {
+                    TextField("銀行名", text: $name)
+                    TextField("支店名", text: $branchName)
+                    TextField("口座番号", text: $accountNumber)
+                        .keyboardType(.numberPad)
+                }
+
+                Section("備考") {
+                    TextEditor(text: $notes)
+                        .frame(minHeight: 120)
+                }
+
+                Section("状態") {
+                    Toggle("利用中", isOn: $isActive)
+                }
 
                 if bank != nil {
-                    Section {
+                    Section("削除") {
                         Button("銀行を削除", role: .destructive) {
                             showingDeleteConfirmation = true
                         }
@@ -51,9 +70,18 @@ struct BankEditorView: View {
                     Button("保存") {
                         if let bank {
                             bank.name = trimmedName
+                            bank.branchName = trimmedBranchName
+                            bank.accountNumber = trimmedAccountNumber
+                            bank.notes = trimmedNotes
                             bank.isActive = isActive
                         } else {
-                            let bank = Bank(name: trimmedName, isActive: isActive)
+                            let bank = Bank(
+                                name: trimmedName,
+                                branchName: trimmedBranchName,
+                                accountNumber: trimmedAccountNumber,
+                                notes: trimmedNotes,
+                                isActive: isActive
+                            )
                             modelContext.insert(bank)
                         }
                         dismiss()
@@ -86,6 +114,23 @@ struct BankEditorView: View {
 
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedBranchName: String? {
+        normalizedOptionalText(branchName)
+    }
+
+    private var trimmedAccountNumber: String? {
+        normalizedOptionalText(accountNumber)
+    }
+
+    private var trimmedNotes: String? {
+        normalizedOptionalText(notes)
+    }
+
+    private func normalizedOptionalText(_ text: String) -> String? {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedText.isEmpty ? nil : trimmedText
     }
 }
 

@@ -31,11 +31,11 @@ struct CardTabView: View {
                     )
                 } else {
                     List {
-                        ForEach(cards) { card in
+                        ForEach(displayedCards) { card in
                             NavigationLink {
                                 CardDetailView(card: card)
                             } label: {
-                                CardRow(card: card)
+                                ActiveStatusRow(card, title: card.name)
                             }
                         }
                         .onDelete(perform: deleteCards)
@@ -61,24 +61,12 @@ struct CardTabView: View {
 
     private func deleteCards(offsets: IndexSet) {
         for index in offsets {
-            modelContext.delete(cards[index])
+            modelContext.delete(displayedCards[index])
         }
     }
-}
 
-private struct CardRow: View {
-    @Bindable var card: Card
-
-    var body: some View {
-        HStack {
-            ActiveStatusIndicator(card)
-
-            Text(card.name)
-                .font(.headline)
-
-            Spacer()
-        }
-        .padding(.vertical, 4)
+    private var displayedCards: [Card] {
+        cards.sortedForDisplay()
     }
 }
 

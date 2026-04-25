@@ -15,15 +15,19 @@ struct ElectronicMoneyDetailView: View {
 
     var body: some View {
         List {
-            Section("基本情報") {
-                LabeledContent("状態", value: electronicMoney.statusText)
+            DetailStatusSection(electronicMoney)
+
+            if let notes = electronicMoney.trimmedNotes {
+                Section("備考") {
+                    Text(notes)
+                }
             }
 
-            Section("関連") {
+            Section("チャージ元カード") {
                 NavigationLink {
                     CardDetailView(card: electronicMoney.card)
                 } label: {
-                    LabeledContent("カード", value: electronicMoney.card.name)
+                    ActiveStatusRow(electronicMoney.card, title: electronicMoney.card.name)
                 }
             }
         }

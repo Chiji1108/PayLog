@@ -24,11 +24,11 @@ struct BankTabView: View {
                     )
                 } else {
                     List {
-                        ForEach(banks) { bank in
+                        ForEach(displayedBanks) { bank in
                             NavigationLink {
                                 BankDetailView(bank: bank)
                             } label: {
-                                BankRow(bank: bank)
+                                ActiveStatusRow(bank, title: bank.name)
                             }
                         }
                         .onDelete(perform: deleteBanks)
@@ -53,24 +53,12 @@ struct BankTabView: View {
 
     private func deleteBanks(offsets: IndexSet) {
         for index in offsets {
-            modelContext.delete(banks[index])
+            modelContext.delete(displayedBanks[index])
         }
     }
-}
 
-private struct BankRow: View {
-    @Bindable var bank: Bank
-
-    var body: some View {
-        HStack {
-            ActiveStatusIndicator(bank)
-
-            Text(bank.name)
-                .font(.headline)
-
-            Spacer()
-        }
-        .padding(.vertical, 4)
+    private var displayedBanks: [Bank] {
+        banks.sortedForDisplay()
     }
 }
 

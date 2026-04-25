@@ -15,19 +15,35 @@ struct CardDetailView: View {
 
     var body: some View {
         List {
-            Section("基本情報") {
-                LabeledContent("状態", value: card.statusText)
-            }
+            DetailStatusSection(card)
 
-            Section("関連") {
-                NavigationLink {
-                    BankDetailView(bank: card.bank)
-                } label: {
-                    LabeledContent("銀行", value: card.bank.name)
+            if card.lastFourDigits != nil || card.expiryDate != nil {
+                Section("カード情報") {
+                    if let lastFourDigits = card.lastFourDigits {
+                        LabeledContent("末尾4桁", value: lastFourDigits)
+                    }
+
+                    if let expiryDate = card.expiryDate {
+                        LabeledContent("有効期限", value: expiryDate)
+                    }
                 }
             }
 
-            Section("紐づくサブスク") {
+            if let notes = card.trimmedNotes {
+                Section("備考") {
+                    Text(notes)
+                }
+            }
+
+            Section("引き落とし口座") {
+                NavigationLink {
+                    BankDetailView(bank: card.bank)
+                } label: {
+                    ActiveStatusRow(card.bank, title: card.bank.name)
+                }
+            }
+
+            Section("このカードで支払うサブスク") {
                 if sortedSubscriptions.isEmpty {
                     Text("まだサブスクはありません")
                         .foregroundStyle(.secondary)
@@ -36,18 +52,19 @@ struct CardDetailView: View {
                         NavigationLink {
                             SubscriptionDetailView(subscription: subscription)
                         } label: {
-                            HStack {
-                                Text(subscription.name)
-                                Spacer()
-                                Text(subscription.monthlyAmount.formatted(.currency(code: "JPY").precision(.fractionLength(0))))
-                                    .foregroundStyle(.secondary)
-                            }
+                            ActiveStatusRow(
+                                subscription,
+                                title: subscription.name,
+                                trailingText: subscription.amount.formatted(
+                                    .currency(code: "JPY").precision(.fractionLength(0))
+                                )
+                            )
                         }
                     }
                 }
             }
 
-            Section("紐づく電子マネー") {
+            Section("このカードに紐づく電子マネー") {
                 if sortedElectronicMoneys.isEmpty {
                     Text("まだ電子マネーはありません")
                         .foregroundStyle(.secondary)
@@ -56,11 +73,7 @@ struct CardDetailView: View {
                         NavigationLink {
                             ElectronicMoneyDetailView(electronicMoney: electronicMoney)
                         } label: {
-                            HStack {
-                                Text(electronicMoney.name)
-                                Spacer()
-                                ActiveStatusIndicator(electronicMoney)
-                            }
+                            ActiveStatusRow(electronicMoney, title: electronicMoney.name)
                         }
                     }
                 }

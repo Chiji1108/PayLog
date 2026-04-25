@@ -16,7 +16,9 @@ struct SubscriptionEditorView: View {
     private let subscription: SubscriptionItem?
     private let onDelete: (() -> Void)?
     @State private var name = ""
-    @State private var monthlyAmount = 0
+    @State private var amount: Int?
+    @State private var billingCycle: SubscriptionBillingCycle = .monthly
+    @State private var notes = ""
     @State private var isActive = true
     @State private var selectedCard: Card?
     @State private var showingDeleteConfirmation = false
@@ -25,7 +27,9 @@ struct SubscriptionEditorView: View {
         self.subscription = subscription
         self.onDelete = onDelete
         _name = State(initialValue: subscription?.name ?? "")
-        _monthlyAmount = State(initialValue: subscription?.monthlyAmount ?? 0)
+        _amount = State(initialValue: subscription?.amount)
+        _billingCycle = State(initialValue: subscription?.billingCycle ?? .monthly)
+        _notes = State(initialValue: subscription?.notes ?? "")
         _isActive = State(initialValue: subscription?.isActive ?? true)
         _selectedCard = State(initialValue: subscription?.card)
     }
@@ -33,20 +37,36 @@ struct SubscriptionEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                TextField("サブスク名", text: $name)
-                TextField("月額", value: $monthlyAmount, format: .number)
-                    .keyboardType(.numberPad)
+                Section("基本情報") {
+                    TextField("サブスク名", text: $name)
+                    Picker("請求サイクル", selection: $billingCycle) {
+                        ForEach(SubscriptionBillingCycle.allCases) { cycle in
+                            Text(cycle.label).tag(cycle)
+                        }
+                    }
+                    TextField("金額", value: $amount, format: .number)
+                        .keyboardType(.numberPad)
+                }
 
-                Picker("カード", selection: $selectedCard) {
-                    ForEach(cards) { card in
-                        Text(card.name).tag(card as Card?)
+                Section("支払いカード") {
+                    Picker("カード", selection: $selectedCard) {
+                        ForEach(cards) { card in
+                            Text(card.name).tag(card as Card?)
+                        }
                     }
                 }
 
-                Toggle("アクティブ", isOn: $isActive)
+                Section("備考") {
+                    TextEditor(text: $notes)
+                        .frame(minHeight: 120)
+                }
+
+                Section("状態") {
+                    Toggle("利用中", isOn: $isActive)
+                }
 
                 if subscription != nil {
-                    Section {
+                    Section("削除") {
                         Button("サブスクを削除", role: .destructive) {
                             showingDeleteConfirmation = true
                         }
@@ -63,19 +83,23 @@ struct SubscriptionEditorView: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
-                        guard let selectedCard else {
+                        guard let selectedCard, let amount, amount > 0 else {
                             return
                         }
 
                         if let subscription {
                             subscription.name = trimmedName
-                            subscription.monthlyAmount = monthlyAmount
+                            subscription.amount = amount
+                            subscription.billingCycle = billingCycle
+                            subscription.notes = trimmedNotes
                             subscription.card = selectedCard
                             subscription.isActive = isActive
                         } else {
                             let subscription = SubscriptionItem(
                                 name: trimmedName,
-                                monthlyAmount: monthlyAmount,
+                                amount: amount,
+                                billingCycle: billingCycle,
+                                notes: trimmedNotes,
                                 card: selectedCard,
                                 isActive: isActive
                             )
@@ -83,7 +107,7 @@ struct SubscriptionEditorView: View {
                         }
                         dismiss()
                     }
-                    .disabled(trimmedName.isEmpty || selectedCard == nil || monthlyAmount <= 0)
+                    .disabled(trimmedName.isEmpty || selectedCard == nil || !hasValidAmount)
                 }
             }
             .onAppear {
@@ -114,6 +138,19 @@ struct SubscriptionEditorView: View {
 
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedNotes: String? {
+        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedNotes.isEmpty ? nil : trimmedNotes
+    }
+
+    private var hasValidAmount: Bool {
+        guard let amount else {
+            return false
+        }
+
+        return amount > 0
     }
 }
 

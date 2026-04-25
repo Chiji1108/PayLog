@@ -16,6 +16,7 @@ struct ElectronicMoneyEditorView: View {
     private let electronicMoney: ElectronicMoney?
     private let onDelete: (() -> Void)?
     @State private var name = ""
+    @State private var notes = ""
     @State private var isActive = true
     @State private var selectedCard: Card?
     @State private var showingDeleteConfirmation = false
@@ -24,6 +25,7 @@ struct ElectronicMoneyEditorView: View {
         self.electronicMoney = electronicMoney
         self.onDelete = onDelete
         _name = State(initialValue: electronicMoney?.name ?? "")
+        _notes = State(initialValue: electronicMoney?.notes ?? "")
         _isActive = State(initialValue: electronicMoney?.isActive ?? true)
         _selectedCard = State(initialValue: electronicMoney?.card)
     }
@@ -31,18 +33,29 @@ struct ElectronicMoneyEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                TextField("電子マネー名", text: $name)
+                Section("基本情報") {
+                    TextField("電子マネー名", text: $name)
+                }
 
-                Picker("カード", selection: $selectedCard) {
-                    ForEach(cards) { card in
-                        Text(card.name).tag(card as Card?)
+                Section("チャージ元カード") {
+                    Picker("カード", selection: $selectedCard) {
+                        ForEach(cards) { card in
+                            Text(card.name).tag(card as Card?)
+                        }
                     }
                 }
 
-                Toggle("アクティブ", isOn: $isActive)
+                Section("備考") {
+                    TextEditor(text: $notes)
+                        .frame(minHeight: 120)
+                }
+
+                Section("状態") {
+                    Toggle("利用中", isOn: $isActive)
+                }
 
                 if electronicMoney != nil {
-                    Section {
+                    Section("削除") {
                         Button("電子マネーを削除", role: .destructive) {
                             showingDeleteConfirmation = true
                         }
@@ -65,11 +78,13 @@ struct ElectronicMoneyEditorView: View {
 
                         if let electronicMoney {
                             electronicMoney.name = trimmedName
+                            electronicMoney.notes = trimmedNotes
                             electronicMoney.card = selectedCard
                             electronicMoney.isActive = isActive
                         } else {
                             let electronicMoney = ElectronicMoney(
                                 name: trimmedName,
+                                notes: trimmedNotes,
                                 card: selectedCard,
                                 isActive: isActive
                             )
@@ -108,6 +123,11 @@ struct ElectronicMoneyEditorView: View {
 
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedNotes: String? {
+        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedNotes.isEmpty ? nil : trimmedNotes
     }
 }
 

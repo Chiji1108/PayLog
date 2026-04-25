@@ -15,12 +15,27 @@ struct BankDetailView: View {
 
     var body: some View {
         List {
-            Section("基本情報") {
-                LabeledContent("状態", value: bank.statusText)
-                LabeledContent("カード数", value: "\(bank.cards.count)件")
+            DetailStatusSection(bank)
+
+            if bank.branchName != nil || bank.accountNumber != nil {
+                Section("口座情報") {
+                    if let branchName = bank.branchName {
+                        LabeledContent("支店名", value: branchName)
+                    }
+
+                    if let accountNumber = bank.accountNumber {
+                        LabeledContent("口座番号", value: accountNumber)
+                    }
+                }
             }
 
-            Section("紐づくカード") {
+            if let notes = bank.trimmedNotes {
+                Section("備考") {
+                    Text(notes)
+                }
+            }
+
+            Section("引き落としカード") {
                 if sortedCards.isEmpty {
                     Text("まだカードはありません")
                         .foregroundStyle(.secondary)
@@ -29,11 +44,7 @@ struct BankDetailView: View {
                         NavigationLink {
                             CardDetailView(card: card)
                         } label: {
-                            HStack {
-                                Text(card.name)
-                                Spacer()
-                                ActiveStatusIndicator(card)
-                            }
+                            ActiveStatusRow(card, title: card.name)
                         }
                     }
                 }

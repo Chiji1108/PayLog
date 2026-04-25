@@ -15,16 +15,24 @@ struct SubscriptionDetailView: View {
 
     var body: some View {
         List {
+            DetailStatusSection(subscription)
+
             Section("基本情報") {
-                LabeledContent("月額", value: subscription.monthlyAmount.formatted(.currency(code: "JPY").precision(.fractionLength(0))))
-                LabeledContent("状態", value: subscription.statusText)
+                LabeledContent("請求サイクル", value: subscription.billingCycle.label)
+                LabeledContent("金額", value: subscription.amount.formatted(.currency(code: "JPY").precision(.fractionLength(0))))
             }
 
-            Section("関連") {
+            if let notes = subscription.trimmedNotes {
+                Section("備考") {
+                    Text(notes)
+                }
+            }
+
+            Section("支払いカード") {
                 NavigationLink {
                     CardDetailView(card: subscription.card)
                 } label: {
-                    LabeledContent("カード", value: subscription.card.name)
+                    ActiveStatusRow(subscription.card, title: subscription.card.name)
                 }
             }
         }

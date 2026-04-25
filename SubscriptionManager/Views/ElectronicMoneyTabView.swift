@@ -31,11 +31,11 @@ struct ElectronicMoneyTabView: View {
                     )
                 } else {
                     List {
-                        ForEach(electronicMoneys) { electronicMoney in
+                        ForEach(displayedElectronicMoneys) { electronicMoney in
                             NavigationLink {
                                 ElectronicMoneyDetailView(electronicMoney: electronicMoney)
                             } label: {
-                                ElectronicMoneyRow(electronicMoney: electronicMoney)
+                                ActiveStatusRow(electronicMoney, title: electronicMoney.name)
                             }
                         }
                         .onDelete(perform: deleteElectronicMoneys)
@@ -61,24 +61,12 @@ struct ElectronicMoneyTabView: View {
 
     private func deleteElectronicMoneys(offsets: IndexSet) {
         for index in offsets {
-            modelContext.delete(electronicMoneys[index])
+            modelContext.delete(displayedElectronicMoneys[index])
         }
     }
-}
 
-private struct ElectronicMoneyRow: View {
-    @Bindable var electronicMoney: ElectronicMoney
-
-    var body: some View {
-        HStack {
-            ActiveStatusIndicator(electronicMoney)
-
-            Text(electronicMoney.name)
-                .font(.headline)
-
-            Spacer()
-        }
-        .padding(.vertical, 4)
+    private var displayedElectronicMoneys: [ElectronicMoney] {
+        electronicMoneys.sortedForDisplay()
     }
 }
 

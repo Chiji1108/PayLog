@@ -13,6 +13,7 @@ struct SubscriptionTabView: View {
     @Query(sort: \Card.name) private var cards: [Card]
     @Query(sort: \SubscriptionItem.name) private var subscriptions: [SubscriptionItem]
     @State private var showingAddSheet = false
+    @State private var selectedFilter: SubscriptionFilter = .monthly
 
     var body: some View {
         NavigationStack {
@@ -31,19 +32,45 @@ struct SubscriptionTabView: View {
                     )
                 } else {
                     List {
-                        ForEach(subscriptions) { subscription in
-                            NavigationLink {
-                                SubscriptionDetailView(subscription: subscription)
-                            } label: {
-                                SubscriptionRow(subscription: subscription)
+                        if filteredSubscriptions.isEmpty {
+                            Section {
+                                ContentUnavailableView(
+                                    selectedFilter.emptyTitle,
+                                    systemImage: "repeat.circle",
+                                    description: Text(selectedFilter.emptyDescription)
+                                )
                             }
+                        } else {
+                            ForEach(filteredSubscriptions) { subscription in
+                                NavigationLink {
+                                    SubscriptionDetailView(subscription: subscription)
+                                } label: {
+                                    ActiveStatusRow(
+                                        subscription,
+                                        title: subscription.name,
+                                        trailingText: subscription.amount.formatted(
+                                            .currency(code: "JPY").precision(.fractionLength(0))
+                                        )
+                                    )
+                                }
+                            }
+                            .onDelete(perform: deleteSubscriptions)
                         }
-                        .onDelete(perform: deleteSubscriptions)
                     }
                 }
             }
             .navigationTitle("サブスク")
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Picker("請求サイクル", selection: $selectedFilter) {
+                        ForEach(SubscriptionFilter.allCases) { filter in
+                            Text(filter.label).tag(filter)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 180)
+                }
+
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showingAddSheet = true
@@ -61,31 +88,55 @@ struct SubscriptionTabView: View {
 
     private func deleteSubscriptions(offsets: IndexSet) {
         for index in offsets {
-            modelContext.delete(subscriptions[index])
+            modelContext.delete(filteredSubscriptions[index])
         }
+    }
+
+    private var filteredSubscriptions: [SubscriptionItem] {
+        let matchingSubscriptions: [SubscriptionItem]
+
+        switch selectedFilter {
+        case .monthly:
+            matchingSubscriptions = subscriptions.filter { $0.billingCycle == .monthly }
+        case .yearly:
+            matchingSubscriptions = subscriptions.filter { $0.billingCycle == .yearly }
+        }
+
+        return matchingSubscriptions.sortedForDisplay()
     }
 }
 
-private struct SubscriptionRow: View {
-    @Bindable var subscription: SubscriptionItem
+private enum SubscriptionFilter: String, CaseIterable, Identifiable {
+    case monthly
+    case yearly
 
-    var body: some View {
-        HStack {
-            ActiveStatusIndicator(subscription)
+    var id: Self { self }
 
-            Text(subscription.name)
-                .font(.headline)
-
-            Spacer()
-
-            Text(
-                subscription.monthlyAmount.formatted(
-                    .currency(code: "JPY").precision(.fractionLength(0))
-                )
-            )
-            .foregroundStyle(.secondary)
+    var label: String {
+        switch self {
+        case .monthly:
+            "月額"
+        case .yearly:
+            "年額"
         }
-        .padding(.vertical, 4)
+    }
+
+    var emptyTitle: String {
+        switch self {
+        case .monthly:
+            "月額サブスクがまだありません"
+        case .yearly:
+            "年額サブスクがまだありません"
+        }
+    }
+
+    var emptyDescription: String {
+        switch self {
+        case .monthly:
+            "月額サブスクを追加するとここに表示されます。"
+        case .yearly:
+            "年額サブスクを追加するとここに表示されます。"
+        }
     }
 }
 

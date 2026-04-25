@@ -11,7 +11,7 @@ protocol Activatable {
 
 extension Activatable {
     var statusText: String {
-        isActive ? "アクティブ" : "非アクティブ"
+        isActive ? "利用中" : "停止中"
     }
 }
 
