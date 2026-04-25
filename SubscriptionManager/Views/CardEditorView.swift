@@ -20,7 +20,7 @@ struct CardEditorView: View {
     @State private var expiryDate = ""
     @State private var notes = ""
     @State private var isActive = true
-    @State private var selectedBank: Bank?
+    @State private var selectedBankID: PersistentIdentifier?
     @State private var showingDeleteConfirmation = false
 
     init(card: Card? = nil, onDelete: (() -> Void)? = nil) {
@@ -31,7 +31,7 @@ struct CardEditorView: View {
         _expiryDate = State(initialValue: card?.expiryDate ?? "")
         _notes = State(initialValue: card?.notes ?? "")
         _isActive = State(initialValue: card?.isActive ?? true)
-        _selectedBank = State(initialValue: card?.bank)
+        _selectedBankID = State(initialValue: card?.bank?.persistentModelID)
     }
 
     var body: some View {
@@ -46,11 +46,11 @@ struct CardEditorView: View {
                 }
 
                 Section("引き落とし口座") {
-                    Picker("銀行", selection: $selectedBank) {
-                        Text("未設定").tag(nil as Bank?)
+                    Picker("銀行", selection: $selectedBankID) {
+                        Text("未設定").tag(Optional<PersistentIdentifier>.none)
 
                         ForEach(banks) { bank in
-                            Text(bank.name).tag(bank as Bank?)
+                            Text(bank.name).tag(Optional(bank.persistentModelID))
                         }
                     }
                 }
@@ -142,6 +142,14 @@ struct CardEditorView: View {
 
     private var trimmedNotes: String? {
         normalizedOptionalText(notes)
+    }
+
+    private var selectedBank: Bank? {
+        guard let selectedBankID else {
+            return nil
+        }
+
+        return banks.first { $0.persistentModelID == selectedBankID }
     }
 
     private func normalizedOptionalText(_ text: String) -> String? {

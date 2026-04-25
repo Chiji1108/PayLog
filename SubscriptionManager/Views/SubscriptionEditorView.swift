@@ -22,8 +22,8 @@ struct SubscriptionEditorView: View {
     @State private var paymentMethod: SubscriptionPaymentMethod = .card
     @State private var notes = ""
     @State private var isActive = true
-    @State private var selectedCard: Card?
-    @State private var selectedBank: Bank?
+    @State private var selectedCardID: PersistentIdentifier?
+    @State private var selectedBankID: PersistentIdentifier?
     @State private var showingDeleteConfirmation = false
 
     init(subscription: SubscriptionItem? = nil, onDelete: (() -> Void)? = nil) {
@@ -35,8 +35,8 @@ struct SubscriptionEditorView: View {
         _paymentMethod = State(initialValue: subscription?.paymentMethod ?? .card)
         _notes = State(initialValue: subscription?.notes ?? "")
         _isActive = State(initialValue: subscription?.isActive ?? true)
-        _selectedCard = State(initialValue: subscription?.card)
-        _selectedBank = State(initialValue: subscription?.bank)
+        _selectedCardID = State(initialValue: subscription?.card?.persistentModelID)
+        _selectedBankID = State(initialValue: subscription?.bank?.persistentModelID)
     }
 
     var body: some View {
@@ -66,11 +66,11 @@ struct SubscriptionEditorView: View {
                             Text("利用可能なカードがありません")
                                 .foregroundStyle(.secondary)
                         } else {
-                            Picker("カード", selection: $selectedCard) {
-                                Text("未設定").tag(nil as Card?)
+                            Picker("カード", selection: $selectedCardID) {
+                                Text("未設定").tag(Optional<PersistentIdentifier>.none)
 
                                 ForEach(cards) { card in
-                                    Text(card.name).tag(card as Card?)
+                                    Text(card.name).tag(Optional(card.persistentModelID))
                                 }
                             }
                         }
@@ -79,11 +79,11 @@ struct SubscriptionEditorView: View {
                             Text("利用可能な銀行口座がありません")
                                 .foregroundStyle(.secondary)
                         } else {
-                            Picker("銀行口座", selection: $selectedBank) {
-                                Text("未設定").tag(nil as Bank?)
+                            Picker("銀行口座", selection: $selectedBankID) {
+                                Text("未設定").tag(Optional<PersistentIdentifier>.none)
 
                                 ForEach(banks) { bank in
-                                    Text(bank.name).tag(bank as Bank?)
+                                    Text(bank.name).tag(Optional(bank.persistentModelID))
                                 }
                             }
                         }
@@ -181,6 +181,22 @@ struct SubscriptionEditorView: View {
     private var trimmedNotes: String? {
         let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedNotes.isEmpty ? nil : trimmedNotes
+    }
+
+    private var selectedCard: Card? {
+        guard let selectedCardID else {
+            return nil
+        }
+
+        return cards.first { $0.persistentModelID == selectedCardID }
+    }
+
+    private var selectedBank: Bank? {
+        guard let selectedBankID else {
+            return nil
+        }
+
+        return banks.first { $0.persistentModelID == selectedBankID }
     }
 
     private var hasValidAmount: Bool {

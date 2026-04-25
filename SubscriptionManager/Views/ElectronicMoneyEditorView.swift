@@ -18,7 +18,7 @@ struct ElectronicMoneyEditorView: View {
     @State private var name = ""
     @State private var notes = ""
     @State private var isActive = true
-    @State private var selectedCard: Card?
+    @State private var selectedCardID: PersistentIdentifier?
     @State private var showingDeleteConfirmation = false
 
     init(electronicMoney: ElectronicMoney? = nil, onDelete: (() -> Void)? = nil) {
@@ -27,7 +27,7 @@ struct ElectronicMoneyEditorView: View {
         _name = State(initialValue: electronicMoney?.name ?? "")
         _notes = State(initialValue: electronicMoney?.notes ?? "")
         _isActive = State(initialValue: electronicMoney?.isActive ?? true)
-        _selectedCard = State(initialValue: electronicMoney?.card)
+        _selectedCardID = State(initialValue: electronicMoney?.card?.persistentModelID)
     }
 
     var body: some View {
@@ -38,11 +38,11 @@ struct ElectronicMoneyEditorView: View {
                 }
 
                 Section("チャージ元カード") {
-                    Picker("カード", selection: $selectedCard) {
-                        Text("未設定").tag(nil as Card?)
+                    Picker("カード", selection: $selectedCardID) {
+                        Text("未設定").tag(Optional<PersistentIdentifier>.none)
 
                         ForEach(cards) { card in
-                            Text(card.name).tag(card as Card?)
+                            Text(card.name).tag(Optional(card.persistentModelID))
                         }
                     }
                 }
@@ -123,6 +123,14 @@ struct ElectronicMoneyEditorView: View {
     private var trimmedNotes: String? {
         let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedNotes.isEmpty ? nil : trimmedNotes
+    }
+
+    private var selectedCard: Card? {
+        guard let selectedCardID else {
+            return nil
+        }
+
+        return cards.first { $0.persistentModelID == selectedCardID }
     }
 }
 
