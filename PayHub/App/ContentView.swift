@@ -23,7 +23,7 @@ struct ContentView: View {
 
             ElectronicMoneyTabView()
                 .tabItem {
-                    Label("電子マネー", systemImage: "wallet.pass")
+                    Label("電子マネー", systemImage: "iphone.gen3")
                 }
 
             BankTabView()
