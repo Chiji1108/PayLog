@@ -26,7 +26,7 @@ struct SubscriptionEditorView: View {
     @State private var isActive = true
     @State private var selectedCardID: PersistentIdentifier?
     @State private var selectedBankID: PersistentIdentifier?
-    @State private var showingDeleteConfirmation = false
+    @State private var deleteRequest: DeleteRequest<SubscriptionItem>?
 
     init(subscription: SubscriptionItem? = nil, onDelete: (() -> Void)? = nil) {
         self.subscription = subscription
@@ -126,8 +126,13 @@ struct SubscriptionEditorView: View {
                 if subscription != nil {
                     Section("削除") {
                         Button("サブスクを削除", role: .destructive) {
-                            showingDeleteConfirmation = true
+                            guard let subscription else {
+                                return
+                            }
+
+                            deleteRequest = DeleteRequest(item: subscription)
                         }
+                        .deleteConfirmation(request: $deleteRequest, onConfirm: deleteSubscription)
                     }
                 }
             }
@@ -184,26 +189,6 @@ struct SubscriptionEditorView: View {
                     .disabled(trimmedName.isEmpty || !hasValidAmount || !hasValidBillingSchedule)
                 }
             }
-            .confirmationDialog(
-                "このサブスクを削除しますか？",
-                isPresented: $showingDeleteConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("削除", role: .destructive) {
-                    guard let subscription else {
-                        return
-                    }
-
-                    modelContext.delete(subscription)
-                    onDelete?()
-                    dismiss()
-                }
-
-                Button("キャンセル", role: .cancel) {
-                }
-            } message: {
-                Text("この操作は元に戻せません。")
-            }
         }
     }
 
@@ -257,6 +242,11 @@ struct SubscriptionEditorView: View {
         }
     }
 
+    private func deleteSubscription(_ subscription: SubscriptionItem) {
+        modelContext.delete(subscription)
+        onDelete?()
+        dismiss()
+    }
 }
 
 #Preview("Subscription Editor", traits: .sampleData) {

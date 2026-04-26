@@ -19,7 +19,7 @@ struct BankEditorView: View {
     @State private var accountNumber = ""
     @State private var notes = ""
     @State private var isActive = true
-    @State private var showingDeleteConfirmation = false
+    @State private var deleteRequest: DeleteRequest<Bank>?
 
     init(bank: Bank? = nil, onDelete: (() -> Void)? = nil) {
         self.bank = bank
@@ -52,13 +52,18 @@ struct BankEditorView: View {
 
                 if bank != nil {
                     Section("削除") {
-                        Button("銀行を削除", role: .destructive) {
-                            showingDeleteConfirmation = true
+                        Button("銀行口座を削除", role: .destructive) {
+                            guard let bank else {
+                                return
+                            }
+
+                            deleteRequest = DeleteRequest(item: bank)
                         }
+                        .deleteConfirmation(request: $deleteRequest, onConfirm: deleteBank)
                     }
                 }
             }
-            .navigationTitle(bank == nil ? "銀行を追加" : "銀行を編集")
+            .navigationTitle(bank == nil ? "銀行口座を追加" : "銀行口座を編集")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("キャンセル") {
@@ -89,26 +94,6 @@ struct BankEditorView: View {
                     .disabled(trimmedName.isEmpty)
                 }
             }
-            .confirmationDialog(
-                "この銀行を削除しますか？",
-                isPresented: $showingDeleteConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("削除", role: .destructive) {
-                    guard let bank else {
-                        return
-                    }
-
-                    modelContext.delete(bank)
-                    onDelete?()
-                    dismiss()
-                }
-
-                Button("キャンセル", role: .cancel) {
-                }
-            } message: {
-                Text("紐付いているカードや口座振替の設定は未設定になります。")
-            }
         }
     }
 
@@ -131,6 +116,12 @@ struct BankEditorView: View {
     private func normalizedOptionalText(_ text: String) -> String? {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedText.isEmpty ? nil : trimmedText
+    }
+
+    private func deleteBank(_ bank: Bank) {
+        modelContext.delete(bank)
+        onDelete?()
+        dismiss()
     }
 }
 

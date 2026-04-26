@@ -20,7 +20,7 @@ struct ElectronicMoneyTabView: View {
                     SampleDataContentUnavailableView(
                         title: "電子マネーがまだありません",
                         systemImage: "iphone.gen3",
-                        description: "右上の追加ボタンから登録できます。チャージ元カードはあとから設定できます。",
+                        description: "カードを登録しておくと、スムーズに追加できます。",
                         addSampleData: addSampleData
                     )
                 } else {
@@ -56,6 +56,10 @@ struct ElectronicMoneyTabView: View {
         for index in offsets {
             modelContext.delete(displayedElectronicMoneys[index])
         }
+    }
+
+    private func deleteElectronicMoney(_ electronicMoney: ElectronicMoney) {
+        modelContext.delete(electronicMoney)
     }
 
     private var displayedElectronicMoneys: [ElectronicMoney] {

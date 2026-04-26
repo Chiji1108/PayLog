@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "C6A3EA942F78083400A34B8F"
-               BuildableName = "PayHub.app"
-               BlueprintName = "PayHub"
-               ReferencedContainer = "container:PayHub.xcodeproj">
+               BuildableName = "PayLog.app"
+               BlueprintName = "PayLog"
+               ReferencedContainer = "container:PayLog.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -46,9 +46,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C6A3EA942F78083400A34B8F"
-            BuildableName = "PayHub.app"
-            BlueprintName = "PayHub"
-            ReferencedContainer = "container:PayHub.xcodeproj">
+            BuildableName = "PayLog.app"
+            BlueprintName = "PayLog"
+            ReferencedContainer = "container:PayLog.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -63,9 +63,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C6A3EA942F78083400A34B8F"
-            BuildableName = "PayHub.app"
-            BlueprintName = "PayHub"
-            ReferencedContainer = "container:PayHub.xcodeproj">
+            BuildableName = "PayLog.app"
+            BlueprintName = "PayLog"
+            ReferencedContainer = "container:PayLog.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

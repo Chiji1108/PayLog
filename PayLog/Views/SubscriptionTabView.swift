@@ -21,7 +21,7 @@ struct SubscriptionTabView: View {
                     SampleDataContentUnavailableView(
                         title: "サブスクがまだありません",
                         systemImage: "repeat.circle",
-                        description: "右上の追加ボタンから登録できます。支払い方法や請求スケジュールはあとから設定できます。",
+                        description: "カードや銀行口座を登録しておくと、スムーズに追加できます。",
                         addSampleData: addSampleData
                     )
                 } else {
@@ -103,6 +103,10 @@ struct SubscriptionTabView: View {
         for index in offsets {
             modelContext.delete(filteredSubscriptions[index])
         }
+    }
+
+    private func deleteSubscription(_ subscription: SubscriptionItem) {
+        modelContext.delete(subscription)
     }
 
     private var filteredSubscriptions: [SubscriptionItem] {

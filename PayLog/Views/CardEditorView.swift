@@ -21,7 +21,7 @@ struct CardEditorView: View {
     @State private var notes = ""
     @State private var isActive = true
     @State private var selectedBankID: PersistentIdentifier?
-    @State private var showingDeleteConfirmation = false
+    @State private var deleteRequest: DeleteRequest<Card>?
 
     init(card: Card? = nil, onDelete: (() -> Void)? = nil) {
         self.card = card
@@ -48,7 +48,7 @@ struct CardEditorView: View {
                 }
 
                 Section("引き落とし口座") {
-                    Picker("銀行", selection: $selectedBankID) {
+                    Picker("銀行口座", selection: $selectedBankID) {
                         Text("未設定").tag(Optional<PersistentIdentifier>.none)
 
                         ForEach(banks) { bank in
@@ -73,8 +73,13 @@ struct CardEditorView: View {
                 if card != nil {
                     Section("削除") {
                         Button("カードを削除", role: .destructive) {
-                            showingDeleteConfirmation = true
+                            guard let card else {
+                                return
+                            }
+
+                            deleteRequest = DeleteRequest(item: card)
                         }
+                        .deleteConfirmation(request: $deleteRequest, onConfirm: deleteCard)
                     }
                 }
             }
@@ -111,26 +116,6 @@ struct CardEditorView: View {
                     .disabled(trimmedName.isEmpty)
                 }
             }
-            .confirmationDialog(
-                "このカードを削除しますか？",
-                isPresented: $showingDeleteConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("削除", role: .destructive) {
-                    guard let card else {
-                        return
-                    }
-
-                    modelContext.delete(card)
-                    onDelete?()
-                    dismiss()
-                }
-
-                Button("キャンセル", role: .cancel) {
-                }
-            } message: {
-                Text("紐付いているサブスクや電子マネーのカード設定は未設定になります。")
-            }
         }
     }
 
@@ -157,6 +142,12 @@ struct CardEditorView: View {
     private func normalizedOptionalText(_ text: String) -> String? {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedText.isEmpty ? nil : trimmedText
+    }
+
+    private func deleteCard(_ card: Card) {
+        modelContext.delete(card)
+        onDelete?()
+        dismiss()
     }
 }
 

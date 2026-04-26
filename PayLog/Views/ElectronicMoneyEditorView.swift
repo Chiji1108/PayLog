@@ -19,7 +19,7 @@ struct ElectronicMoneyEditorView: View {
     @State private var notes = ""
     @State private var isActive = true
     @State private var selectedCardID: PersistentIdentifier?
-    @State private var showingDeleteConfirmation = false
+    @State private var deleteRequest: DeleteRequest<ElectronicMoney>?
 
     init(electronicMoney: ElectronicMoney? = nil, onDelete: (() -> Void)? = nil) {
         self.electronicMoney = electronicMoney
@@ -59,8 +59,13 @@ struct ElectronicMoneyEditorView: View {
                 if electronicMoney != nil {
                     Section("削除") {
                         Button("電子マネーを削除", role: .destructive) {
-                            showingDeleteConfirmation = true
+                            guard let electronicMoney else {
+                                return
+                            }
+
+                            deleteRequest = DeleteRequest(item: electronicMoney)
                         }
+                        .deleteConfirmation(request: $deleteRequest, onConfirm: deleteElectronicMoney)
                     }
                 }
             }
@@ -93,26 +98,6 @@ struct ElectronicMoneyEditorView: View {
                     .disabled(trimmedName.isEmpty)
                 }
             }
-            .confirmationDialog(
-                "この電子マネーを削除しますか？",
-                isPresented: $showingDeleteConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("削除", role: .destructive) {
-                    guard let electronicMoney else {
-                        return
-                    }
-
-                    modelContext.delete(electronicMoney)
-                    onDelete?()
-                    dismiss()
-                }
-
-                Button("キャンセル", role: .cancel) {
-                }
-            } message: {
-                Text("この操作は元に戻せません。")
-            }
         }
     }
 
@@ -131,6 +116,12 @@ struct ElectronicMoneyEditorView: View {
         }
 
         return cards.first { $0.persistentModelID == selectedCardID }
+    }
+
+    private func deleteElectronicMoney(_ electronicMoney: ElectronicMoney) {
+        modelContext.delete(electronicMoney)
+        onDelete?()
+        dismiss()
     }
 }
 

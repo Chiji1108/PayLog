@@ -1,6 +1,6 @@
 //
-//  PayHubApp.swift
-//  PayHub
+//  PayLogApp.swift
+//  PayLog
 //
 //  Created by 千々岩真吾 on 2026/03/28.
 //
@@ -9,7 +9,7 @@ import SwiftUI
 import SwiftData
 
 @main
-struct PayHubApp: App {
+struct PayLogApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -19,6 +19,6 @@ struct PayHubApp: App {
             Card.self,
             ElectronicMoney.self,
             SubscriptionItem.self,
-        ])
+        ], isUndoEnabled: true)
     }
 }

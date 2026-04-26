@@ -20,7 +20,7 @@ struct CardTabView: View {
                     SampleDataContentUnavailableView(
                         title: "カードがまだありません",
                         systemImage: "creditcard",
-                        description: "右上の追加ボタンから登録できます。引き落とし口座はあとから設定できます。",
+                        description: "銀行口座を登録しておくと、スムーズに追加できます。",
                         addSampleData: addSampleData
                     )
                 } else {
@@ -65,6 +65,10 @@ struct CardTabView: View {
         for index in offsets {
             modelContext.delete(displayedCards[index])
         }
+    }
+
+    private func deleteCard(_ card: Card) {
+        modelContext.delete(card)
     }
 
     private var displayedCards: [Card] {

@@ -28,7 +28,7 @@ struct ContentView: View {
 
             BankTabView()
                 .tabItem {
-                    Label("銀行", systemImage: "building.columns")
+                    Label("銀行口座", systemImage: "building.columns")
                 }
         }
     }

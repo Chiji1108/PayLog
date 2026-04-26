@@ -18,9 +18,9 @@ struct BankTabView: View {
             Group {
                 if banks.isEmpty {
                     SampleDataContentUnavailableView(
-                        title: "銀行がまだありません",
+                        title: "銀行口座がまだありません",
                         systemImage: "building.columns",
-                        description: "最初に銀行を登録すると、次にカードやサブスクを紐付けできます。",
+                        description: "最初に銀行口座を登録すると、次にカードやサブスクを紐付けできます。",
                         addSampleData: addSampleData
                     )
                 } else {
@@ -36,13 +36,13 @@ struct BankTabView: View {
                     }
                 }
             }
-            .navigationTitle("銀行")
+            .navigationTitle("銀行口座")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showingAddSheet = true
                     } label: {
-                        Label("銀行を追加", systemImage: "plus")
+                        Label("銀行口座を追加", systemImage: "plus")
                     }
                 }
             }
@@ -56,6 +56,10 @@ struct BankTabView: View {
         for index in offsets {
             modelContext.delete(displayedBanks[index])
         }
+    }
+
+    private func deleteBank(_ bank: Bank) {
+        modelContext.delete(bank)
     }
 
     private var displayedBanks: [Bank] {
