@@ -15,7 +15,7 @@ enum SampleDataSeeder {
             name: "三井住友銀行",
             branchName: "渋谷支店",
             accountNumber: "1234567",
-            notes: "生活費の引き落としで使っています。",
+            notes: "生活費",
             createdAt: now.addingTimeInterval(-60 * 60 * 24 * 6)
         )
         let mufg = Bank(
@@ -30,7 +30,7 @@ enum SampleDataSeeder {
             name: "Olive",
             lastFourDigits: "1234",
             withdrawalDay: 26,
-            notes: "サブスク支払いをまとめているメインカードです。",
+            notes: "メインカード",
             bank: mitsui,
             createdAt: now.addingTimeInterval(-60 * 60 * 24 * 4)
         )
@@ -45,7 +45,7 @@ enum SampleDataSeeder {
 
         let suica = ElectronicMoney(
             name: "Suica",
-            notes: "通勤用に毎月チャージしています。",
+            notes: "通勤用",
             card: visa,
             createdAt: now.addingTimeInterval(-60 * 60 * 24 * 2)
         )
@@ -61,7 +61,7 @@ enum SampleDataSeeder {
             amount: 1490,
             billingDay: 18,
             billingCycle: .monthly,
-            notes: "家族で共有しています。",
+            notes: "家族共有",
             card: visa,
             createdAt: now.addingTimeInterval(-60 * 60 * 18)
         )
