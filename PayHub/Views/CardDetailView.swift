@@ -57,9 +57,7 @@ struct CardDetailView: View {
                             ActiveStatusRow(
                                 subscription,
                                 title: subscription.name,
-                                trailingText: subscription.amount.formatted(
-                                    .currency(code: "JPY").precision(.fractionLength(0))
-                                )
+                                trailingText: subscription.amountWithBillingCycleText
                             )
                         }
                     }
