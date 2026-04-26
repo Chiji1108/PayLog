@@ -12,7 +12,6 @@ import SwiftData
 final class Card {
     var name: String = ""
     var lastFourDigits: String?
-    var expiryDate: String?
     var notes: String?
     var isActive: Bool = true
     var createdAt: Date = Date.now
@@ -23,7 +22,6 @@ final class Card {
     init(
         name: String,
         lastFourDigits: String? = nil,
-        expiryDate: String? = nil,
         notes: String? = nil,
         bank: Bank? = nil,
         isActive: Bool = true,
@@ -31,24 +29,9 @@ final class Card {
     ) {
         self.name = name
         self.lastFourDigits = lastFourDigits
-        self.expiryDate = expiryDate
         self.notes = notes
         self.bank = bank
         self.isActive = isActive
         self.createdAt = createdAt
-    }
-
-    var formattedExpiryDate: String? {
-        Self.formattedExpiryDate(from: expiryDate)
-    }
-
-    static func formattedExpiryDate(from expiryDate: String?) -> String? {
-        guard let expiryDate, expiryDate.count == 4 else {
-            return nil
-        }
-
-        let month = expiryDate.prefix(2)
-        let year = expiryDate.suffix(2)
-        return "\(month)/\(year)"
     }
 }

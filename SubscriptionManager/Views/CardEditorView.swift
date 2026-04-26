@@ -17,7 +17,6 @@ struct CardEditorView: View {
     private let onDelete: (() -> Void)?
     @State private var name = ""
     @State private var lastFourDigits = ""
-    @State private var expiryDate = ""
     @State private var notes = ""
     @State private var isActive = true
     @State private var selectedBankID: PersistentIdentifier?
@@ -28,7 +27,6 @@ struct CardEditorView: View {
         self.onDelete = onDelete
         _name = State(initialValue: card?.name ?? "")
         _lastFourDigits = State(initialValue: card?.lastFourDigits ?? "")
-        _expiryDate = State(initialValue: card?.expiryDate ?? "")
         _notes = State(initialValue: card?.notes ?? "")
         _isActive = State(initialValue: card?.isActive ?? true)
         _selectedBankID = State(initialValue: card?.bank?.persistentModelID)
@@ -40,8 +38,6 @@ struct CardEditorView: View {
                 Section("基本情報") {
                     TextField("カード名", text: $name)
                     TextField("末尾4桁", text: $lastFourDigits)
-                        .keyboardType(.numberPad)
-                    TextField("有効期限", text: expiryDateBinding, prompt: Text("MM/YY"))
                         .keyboardType(.numberPad)
                 }
 
@@ -85,7 +81,6 @@ struct CardEditorView: View {
                         if let card {
                             card.name = trimmedName
                             card.lastFourDigits = trimmedLastFourDigits
-                            card.expiryDate = trimmedExpiryDate
                             card.notes = trimmedNotes
                             card.bank = selectedBank
                             card.isActive = isActive
@@ -93,7 +88,6 @@ struct CardEditorView: View {
                             let card = Card(
                                 name: trimmedName,
                                 lastFourDigits: trimmedLastFourDigits,
-                                expiryDate: trimmedExpiryDate,
                                 notes: trimmedNotes,
                                 bank: selectedBank,
                                 isActive: isActive
@@ -102,7 +96,7 @@ struct CardEditorView: View {
                         }
                         dismiss()
                     }
-                    .disabled(trimmedName.isEmpty || !isExpiryDateValid)
+                    .disabled(trimmedName.isEmpty)
                 }
             }
             .confirmationDialog(
@@ -136,28 +130,8 @@ struct CardEditorView: View {
         normalizedOptionalText(lastFourDigits)
     }
 
-    private var trimmedExpiryDate: String? {
-        let normalized = normalizedExpiryDateInput(expiryDate)
-        return normalized.isEmpty ? nil : normalized
-    }
-
     private var trimmedNotes: String? {
         normalizedOptionalText(notes)
-    }
-
-    private var expiryDateBinding: Binding<String> {
-        Binding(
-            get: {
-                formattedExpiryDateInput(expiryDate)
-            },
-            set: { newValue in
-                expiryDate = normalizedExpiryDateInput(newValue)
-            }
-        )
-    }
-
-    private var isExpiryDateValid: Bool {
-        expiryDate.isEmpty || expiryDate.count == 4
     }
 
     private var selectedBank: Bank? {
@@ -171,22 +145,6 @@ struct CardEditorView: View {
     private func normalizedOptionalText(_ text: String) -> String? {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedText.isEmpty ? nil : trimmedText
-    }
-
-    private func normalizedExpiryDateInput(_ text: String) -> String {
-        String(text.filter(\.isNumber).prefix(4))
-    }
-
-    private func formattedExpiryDateInput(_ text: String) -> String {
-        let normalized = normalizedExpiryDateInput(text)
-
-        guard normalized.count > 2 else {
-            return normalized
-        }
-
-        let month = normalized.prefix(2)
-        let year = normalized.dropFirst(2)
-        return "\(month)/\(year)"
     }
 }
 

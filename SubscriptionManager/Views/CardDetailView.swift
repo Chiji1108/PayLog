@@ -15,14 +15,10 @@ struct CardDetailView: View {
 
     var body: some View {
         List {
-            if card.lastFourDigits != nil || card.expiryDate != nil {
+            if card.lastFourDigits != nil {
                 Section("カード情報") {
                     if let lastFourDigits = card.lastFourDigits {
                         LabeledContent("末尾4桁", value: lastFourDigits)
-                    }
-
-                    if let expiryDate = card.formattedExpiryDate {
-                        LabeledContent("有効期限", value: expiryDate)
                     }
                 }
             }
