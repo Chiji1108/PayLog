@@ -67,6 +67,11 @@ struct SubscriptionTabView: View {
                 if !filteredSubscriptions.isEmpty {
                     FloatingBadge {
                         HStack(spacing: 8) {
+                            ActiveStatusIndicator(
+                                isActive: true,
+                                statusText: "利用中のサブスクのみを集計"
+                            )
+
                             Text(selectedFilter.totalLabel)
 
                             Text(totalAmountText)
@@ -124,7 +129,7 @@ struct SubscriptionTabView: View {
     }
 
     private var totalAmount: Int {
-        filteredSubscriptions.reduce(0) { partialResult, subscription in
+        filteredSubscriptions.filter(\.isActive).reduce(0) { partialResult, subscription in
             partialResult + subscription.amount
         }
     }

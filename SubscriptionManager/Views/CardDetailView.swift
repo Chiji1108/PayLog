@@ -21,7 +21,7 @@ struct CardDetailView: View {
                         LabeledContent("末尾4桁", value: lastFourDigits)
                     }
 
-                    if let expiryDate = card.expiryDate {
+                    if let expiryDate = card.formattedExpiryDate {
                         LabeledContent("有効期限", value: expiryDate)
                     }
                 }

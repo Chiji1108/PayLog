@@ -10,12 +10,12 @@ import SwiftData
 
 @Model
 final class Card {
-    var name: String
+    var name: String = ""
     var lastFourDigits: String?
     var expiryDate: String?
     var notes: String?
-    var isActive: Bool
-    var createdAt: Date
+    var isActive: Bool = true
+    var createdAt: Date = Date.now
     var bank: Bank?
     @Relationship(deleteRule: .nullify, inverse: \ElectronicMoney.card) var electronicMoneys: [ElectronicMoney]?
     @Relationship(deleteRule: .nullify, inverse: \SubscriptionItem.card) var subscriptions: [SubscriptionItem]?
@@ -36,5 +36,19 @@ final class Card {
         self.bank = bank
         self.isActive = isActive
         self.createdAt = createdAt
+    }
+
+    var formattedExpiryDate: String? {
+        Self.formattedExpiryDate(from: expiryDate)
+    }
+
+    static func formattedExpiryDate(from expiryDate: String?) -> String? {
+        guard let expiryDate, expiryDate.count == 4 else {
+            return nil
+        }
+
+        let month = expiryDate.prefix(2)
+        let year = expiryDate.suffix(2)
+        return "\(month)/\(year)"
     }
 }

@@ -30,11 +30,13 @@ struct ActiveStatusIndicator: View {
 }
 
 struct ActiveStatusRow: View {
+    private let isActive: Bool
     private let title: String
     private let trailingText: String?
     private let indicator: ActiveStatusIndicator
 
     init(_ item: some Activatable, title: String, trailingText: String? = nil) {
+        self.isActive = item.isActive
         self.title = title
         self.trailingText = trailingText
         self.indicator = ActiveStatusIndicator(item)
@@ -46,6 +48,7 @@ struct ActiveStatusRow: View {
 
             Text(title)
                 .font(.headline)
+                .foregroundStyle(isActive ? .primary : .secondary)
 
             Spacer()
 

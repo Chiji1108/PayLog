@@ -44,7 +44,7 @@ private struct FloatingBadgeModifier<Badge: View>: ViewModifier {
             }
             .padding(.horizontal)
             .padding(.top, 8)
-            .padding(.bottom, 16)
+            .padding(.bottom, 24)
             .allowsHitTesting(false)
         }
     }

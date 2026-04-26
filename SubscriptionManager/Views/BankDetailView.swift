@@ -33,7 +33,7 @@ struct BankDetailView: View {
                 }
             }
 
-            Section("引き落としカード") {
+            Section("この口座から引き落とすカード") {
                 if sortedCards.isEmpty {
                     Text("まだカードはありません")
                         .foregroundStyle(.secondary)
@@ -48,7 +48,7 @@ struct BankDetailView: View {
                 }
             }
 
-            Section("この口座から引き落とすサブスク") {
+            Section("口座振替のサブスク") {
                 if sortedSubscriptions.isEmpty {
                     Text("まだサブスクはありません")
                         .foregroundStyle(.secondary)

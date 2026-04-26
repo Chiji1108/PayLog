@@ -41,8 +41,8 @@ struct CardEditorView: View {
                     TextField("カード名", text: $name)
                     TextField("末尾4桁", text: $lastFourDigits)
                         .keyboardType(.numberPad)
-                    TextField("有効期限", text: $expiryDate)
-                        .keyboardType(.numbersAndPunctuation)
+                    TextField("有効期限", text: expiryDateBinding, prompt: Text("MM/YY"))
+                        .keyboardType(.numberPad)
                 }
 
                 Section("引き落とし口座") {
@@ -102,7 +102,7 @@ struct CardEditorView: View {
                         }
                         dismiss()
                     }
-                    .disabled(trimmedName.isEmpty)
+                    .disabled(trimmedName.isEmpty || !isExpiryDateValid)
                 }
             }
             .confirmationDialog(
@@ -137,11 +137,27 @@ struct CardEditorView: View {
     }
 
     private var trimmedExpiryDate: String? {
-        normalizedOptionalText(expiryDate)
+        let normalized = normalizedExpiryDateInput(expiryDate)
+        return normalized.isEmpty ? nil : normalized
     }
 
     private var trimmedNotes: String? {
         normalizedOptionalText(notes)
+    }
+
+    private var expiryDateBinding: Binding<String> {
+        Binding(
+            get: {
+                formattedExpiryDateInput(expiryDate)
+            },
+            set: { newValue in
+                expiryDate = normalizedExpiryDateInput(newValue)
+            }
+        )
+    }
+
+    private var isExpiryDateValid: Bool {
+        expiryDate.isEmpty || expiryDate.count == 4
     }
 
     private var selectedBank: Bank? {
@@ -155,6 +171,22 @@ struct CardEditorView: View {
     private func normalizedOptionalText(_ text: String) -> String? {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedText.isEmpty ? nil : trimmedText
+    }
+
+    private func normalizedExpiryDateInput(_ text: String) -> String {
+        String(text.filter(\.isNumber).prefix(4))
+    }
+
+    private func formattedExpiryDateInput(_ text: String) -> String {
+        let normalized = normalizedExpiryDateInput(text)
+
+        guard normalized.count > 2 else {
+            return normalized
+        }
+
+        let month = normalized.prefix(2)
+        let year = normalized.dropFirst(2)
+        return "\(month)/\(year)"
     }
 }
 

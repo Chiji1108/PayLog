@@ -10,10 +10,10 @@ import SwiftData
 
 @Model
 final class ElectronicMoney {
-    var name: String
+    var name: String = ""
     var notes: String?
-    var isActive: Bool
-    var createdAt: Date
+    var isActive: Bool = true
+    var createdAt: Date = Date.now
     var card: Card?
 
     init(name: String, notes: String? = nil, card: Card? = nil, isActive: Bool = true, createdAt: Date = .now) {

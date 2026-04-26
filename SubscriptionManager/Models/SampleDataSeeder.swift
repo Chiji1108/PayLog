@@ -29,7 +29,7 @@ enum SampleDataSeeder {
         let visa = Card(
             name: "Olive",
             lastFourDigits: "1234",
-            expiryDate: "12/28",
+            expiryDate: "1228",
             notes: "サブスク支払いをまとめているメインカードです。",
             bank: mitsui,
             createdAt: now.addingTimeInterval(-60 * 60 * 24 * 4)
@@ -37,7 +37,7 @@ enum SampleDataSeeder {
         let master = Card(
             name: "MUFG Card",
             lastFourDigits: "9876",
-            expiryDate: "08/27",
+            expiryDate: "0827",
             bank: mufg,
             isActive: false,
             createdAt: now.addingTimeInterval(-60 * 60 * 24 * 3)

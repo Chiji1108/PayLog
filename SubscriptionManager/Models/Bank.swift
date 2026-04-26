@@ -10,12 +10,12 @@ import SwiftData
 
 @Model
 final class Bank {
-    var name: String
+    var name: String = ""
     var branchName: String?
     var accountNumber: String?
     var notes: String?
-    var isActive: Bool
-    var createdAt: Date
+    var isActive: Bool = true
+    var createdAt: Date = Date.now
     @Relationship(deleteRule: .nullify, inverse: \Card.bank) var cards: [Card]?
     @Relationship(deleteRule: .nullify, inverse: \SubscriptionItem.bank) var subscriptions: [SubscriptionItem]?
 

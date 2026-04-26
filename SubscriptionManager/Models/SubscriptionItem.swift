@@ -42,13 +42,13 @@ enum SubscriptionPaymentMethod: String, CaseIterable, Codable, Identifiable {
 
 @Model
 final class SubscriptionItem {
-    var name: String
-    var amount: Int
-    private var billingCycleRawValue: String
+    var name: String = ""
+    var amount: Int = 0
+    private var billingCycleRawValue: String = SubscriptionBillingCycle.monthly.rawValue
     private var paymentMethodRawValue: String?
     var notes: String?
-    var isActive: Bool
-    var createdAt: Date
+    var isActive: Bool = true
+    var createdAt: Date = Date.now
     var card: Card?
     var bank: Bank?
 
