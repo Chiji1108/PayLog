@@ -61,6 +61,38 @@ struct ActiveStatusRow: View {
     }
 }
 
+struct ActiveStatusLabeledNavigationRow<Item: Activatable, Destination: View>: View {
+    private let label: String
+    private let item: Item
+    private let title: String
+    private let destination: Destination
+
+    init(
+        _ label: String,
+        item: Item,
+        title: String,
+        @ViewBuilder destination: () -> Destination
+    ) {
+        self.label = label
+        self.item = item
+        self.title = title
+        self.destination = destination()
+    }
+
+    var body: some View {
+        NavigationLink {
+            destination
+        } label: {
+            LabeledContent(label) {
+                HStack(spacing: 6) {
+                    ActiveStatusIndicator(item)
+                    Text(title)
+                }
+            }
+        }
+    }
+}
+
 struct ActiveStatusBadge: View {
     private let indicator: ActiveStatusIndicator
     private let statusText: String

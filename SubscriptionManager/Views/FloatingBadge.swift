@@ -59,9 +59,7 @@ extension View {
 #Preview("Floating Badge", traits: .sizeThatFitsLayout) {
     FloatingBadge {
         HStack(spacing: 8) {
-            Text("月額合計")
-
-            Text("¥2,770")
+            Text("合計 ¥2,770 / 月")
         }
     }
     .padding()

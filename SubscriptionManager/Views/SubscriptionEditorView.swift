@@ -18,6 +18,8 @@ struct SubscriptionEditorView: View {
     private let onDelete: (() -> Void)?
     @State private var name = ""
     @State private var amount: Int?
+    @State private var billingDay: Int?
+    @State private var billingMonth: Int?
     @State private var billingCycle: SubscriptionBillingCycle = .monthly
     @State private var paymentMethod: SubscriptionPaymentMethod = .card
     @State private var notes = ""
@@ -31,6 +33,8 @@ struct SubscriptionEditorView: View {
         self.onDelete = onDelete
         _name = State(initialValue: subscription?.name ?? "")
         _amount = State(initialValue: subscription?.amount)
+        _billingDay = State(initialValue: subscription?.billingDay)
+        _billingMonth = State(initialValue: subscription?.billingMonth)
         _billingCycle = State(initialValue: subscription?.billingCycle ?? .monthly)
         _paymentMethod = State(initialValue: subscription?.paymentMethod ?? .card)
         _notes = State(initialValue: subscription?.notes ?? "")
@@ -42,6 +46,10 @@ struct SubscriptionEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("状態") {
+                    Toggle("利用中", isOn: $isActive)
+                }
+
                 Section("基本情報") {
                     TextField("サブスク名", text: $name)
                     Picker("請求サイクル", selection: $billingCycle) {
@@ -51,6 +59,26 @@ struct SubscriptionEditorView: View {
                     }
                     TextField("金額", value: $amount, format: .number)
                         .keyboardType(.numberPad)
+                }
+
+                if isActive {
+                    Section {
+                        switch billingCycle {
+                        case .monthly:
+                            DayOfMonthPicker(title: "請求日", selection: $billingDay)
+                        case .yearly:
+                            MonthDayPicker(
+                                monthTitle: "請求月",
+                                dayTitle: "請求日",
+                                monthSelection: $billingMonth,
+                                daySelection: $billingDay
+                            )
+                        }
+                    } header: {
+                        Text("請求スケジュール")
+                    } footer: {
+                        Text("存在しない日は月末に丸めます。2月29日は平年では2月28日扱いです。")
+                    }
                 }
 
                 Section("支払い方法") {
@@ -90,13 +118,9 @@ struct SubscriptionEditorView: View {
                     }
                 }
 
-                Section("備考") {
+                Section("メモ") {
                     TextEditor(text: $notes)
                         .frame(minHeight: 120)
-                }
-
-                Section("状態") {
-                    Toggle("利用中", isOn: $isActive)
                 }
 
                 if subscription != nil {
@@ -108,6 +132,11 @@ struct SubscriptionEditorView: View {
                 }
             }
             .navigationTitle(subscription == nil ? "サブスクを追加" : "サブスクを編集")
+            .onChange(of: billingCycle) { _, newValue in
+                if newValue == .monthly {
+                    billingMonth = nil
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("キャンセル") {
@@ -127,6 +156,8 @@ struct SubscriptionEditorView: View {
                         if let subscription {
                             subscription.name = trimmedName
                             subscription.amount = amount
+                            subscription.billingDay = billingDay
+                            subscription.billingMonth = normalizedBillingMonth
                             subscription.billingCycle = billingCycle
                             subscription.paymentMethod = paymentMethod
                             subscription.notes = trimmedNotes
@@ -137,6 +168,8 @@ struct SubscriptionEditorView: View {
                             let subscription = SubscriptionItem(
                                 name: trimmedName,
                                 amount: amount,
+                                billingDay: billingDay,
+                                billingMonth: normalizedBillingMonth,
                                 billingCycle: billingCycle,
                                 paymentMethod: paymentMethod,
                                 notes: trimmedNotes,
@@ -148,7 +181,7 @@ struct SubscriptionEditorView: View {
                         }
                         dismiss()
                     }
-                    .disabled(trimmedName.isEmpty || !hasValidAmount)
+                    .disabled(trimmedName.isEmpty || !hasValidAmount || !hasValidBillingSchedule)
                 }
             }
             .confirmationDialog(
@@ -205,6 +238,23 @@ struct SubscriptionEditorView: View {
         }
 
         return amount > 0
+    }
+
+    private var normalizedBillingMonth: Int? {
+        billingCycle == .yearly ? billingMonth : nil
+    }
+
+    private var hasValidBillingSchedule: Bool {
+        guard isActive else {
+            return true
+        }
+
+        switch billingCycle {
+        case .monthly:
+            return true
+        case .yearly:
+            return (billingMonth == nil && billingDay == nil) || (billingMonth != nil && billingDay != nil)
+        }
     }
 
 }

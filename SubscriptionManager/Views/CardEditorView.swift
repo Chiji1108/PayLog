@@ -17,6 +17,7 @@ struct CardEditorView: View {
     private let onDelete: (() -> Void)?
     @State private var name = ""
     @State private var lastFourDigits = ""
+    @State private var withdrawalDay: Int?
     @State private var notes = ""
     @State private var isActive = true
     @State private var selectedBankID: PersistentIdentifier?
@@ -27,6 +28,7 @@ struct CardEditorView: View {
         self.onDelete = onDelete
         _name = State(initialValue: card?.name ?? "")
         _lastFourDigits = State(initialValue: card?.lastFourDigits ?? "")
+        _withdrawalDay = State(initialValue: card?.withdrawalDay)
         _notes = State(initialValue: card?.notes ?? "")
         _isActive = State(initialValue: card?.isActive ?? true)
         _selectedBankID = State(initialValue: card?.bank?.persistentModelID)
@@ -35,6 +37,10 @@ struct CardEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("状態") {
+                    Toggle("利用中", isOn: $isActive)
+                }
+
                 Section("基本情報") {
                     TextField("カード名", text: $name)
                     TextField("末尾4桁", text: $lastFourDigits)
@@ -51,13 +57,17 @@ struct CardEditorView: View {
                     }
                 }
 
-                Section("備考") {
-                    TextEditor(text: $notes)
-                        .frame(minHeight: 120)
+                if isActive {
+                    Section {
+                        DayOfMonthPicker(title: "引き落とし日", selection: $withdrawalDay)
+                    } footer: {
+                        Text("31日を指定した場合、30日までの月は月末扱いになります。")
+                    }
                 }
 
-                Section("状態") {
-                    Toggle("利用中", isOn: $isActive)
+                Section("メモ") {
+                    TextEditor(text: $notes)
+                        .frame(minHeight: 120)
                 }
 
                 if card != nil {
@@ -81,6 +91,7 @@ struct CardEditorView: View {
                         if let card {
                             card.name = trimmedName
                             card.lastFourDigits = trimmedLastFourDigits
+                            card.withdrawalDay = withdrawalDay
                             card.notes = trimmedNotes
                             card.bank = selectedBank
                             card.isActive = isActive
@@ -88,6 +99,7 @@ struct CardEditorView: View {
                             let card = Card(
                                 name: trimmedName,
                                 lastFourDigits: trimmedLastFourDigits,
+                                withdrawalDay: withdrawalDay,
                                 notes: trimmedNotes,
                                 bank: selectedBank,
                                 isActive: isActive

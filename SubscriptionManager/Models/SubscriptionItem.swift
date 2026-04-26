@@ -17,10 +17,24 @@ enum SubscriptionBillingCycle: String, CaseIterable, Codable, Identifiable {
     var label: String {
         switch self {
         case .monthly:
-            "月額"
+            "月"
         case .yearly:
-            "年額"
+            "年"
         }
+    }
+
+    var amountSuffix: String {
+        switch self {
+        case .monthly:
+            "月"
+        case .yearly:
+            "年"
+        }
+    }
+
+    func formattedAmount(_ amount: Int) -> String {
+        let amountText = amount.formatted(.currency(code: "JPY").precision(.fractionLength(0)))
+        return "\(amountText) / \(amountSuffix)"
     }
 }
 
@@ -44,6 +58,8 @@ enum SubscriptionPaymentMethod: String, CaseIterable, Codable, Identifiable {
 final class SubscriptionItem {
     var name: String = ""
     var amount: Int = 0
+    var billingDay: Int?
+    var billingMonth: Int?
     private var billingCycleRawValue: String = SubscriptionBillingCycle.monthly.rawValue
     private var paymentMethodRawValue: String?
     var notes: String?
@@ -69,9 +85,15 @@ final class SubscriptionItem {
         set { paymentMethodRawValue = newValue.rawValue }
     }
 
+    var amountWithBillingCycleText: String {
+        billingCycle.formattedAmount(amount)
+    }
+
     init(
         name: String,
         amount: Int,
+        billingDay: Int? = nil,
+        billingMonth: Int? = nil,
         billingCycle: SubscriptionBillingCycle = .monthly,
         paymentMethod: SubscriptionPaymentMethod = .card,
         notes: String? = nil,
@@ -82,6 +104,8 @@ final class SubscriptionItem {
     ) {
         self.name = name
         self.amount = amount
+        self.billingDay = billingDay
+        self.billingMonth = billingCycle == .yearly ? billingMonth : nil
         self.billingCycleRawValue = billingCycle.rawValue
         self.paymentMethodRawValue = paymentMethod.rawValue
         self.notes = notes

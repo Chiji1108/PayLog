@@ -10,27 +10,18 @@ import SwiftData
 
 struct SubscriptionTabView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Card.name) private var cards: [Card]
-    @Query(sort: \Bank.name) private var banks: [Bank]
     @Query(sort: \SubscriptionItem.name) private var subscriptions: [SubscriptionItem]
     @State private var showingAddSheet = false
-    @State private var selectedFilter: SubscriptionFilter = .monthly
+    @State private var selectedFilter: SubscriptionFilter = .all
 
     var body: some View {
         NavigationStack {
             Group {
-                if !hasPaymentMethods {
-                    SampleDataContentUnavailableView(
-                        title: "先に支払い方法を登録してください",
-                        systemImage: "wallet.bifold",
-                        description: "サブスクはカードまたは銀行口座に紐付きます。先に登録してください。",
-                        addSampleData: addSampleData
-                    )
-                } else if subscriptions.isEmpty {
+                if subscriptions.isEmpty {
                     SampleDataContentUnavailableView(
                         title: "サブスクがまだありません",
                         systemImage: "repeat.circle",
-                        description: "右上の追加ボタンから登録できます。",
+                        description: "右上の追加ボタンから登録できます。支払い方法や請求スケジュールはあとから設定できます。",
                         addSampleData: addSampleData
                     )
                 } else {
@@ -48,13 +39,20 @@ struct SubscriptionTabView: View {
                                 NavigationLink {
                                     SubscriptionDetailView(subscription: subscription)
                                 } label: {
-                                    ActiveStatusRow(
-                                        subscription,
-                                        title: subscription.name,
-                                        trailingText: subscription.amount.formatted(
-                                            .currency(code: "JPY").precision(.fractionLength(0))
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        ActiveStatusRow(
+                                            subscription,
+                                            title: subscription.name,
+                                            trailingText: subscription.amountWithBillingCycleText
                                         )
-                                    )
+
+                                        if subscription.isActive, let billingStatus = subscription.nextBillingStatus {
+                                            BillingScheduleProgressView(
+                                                scheduleLabel: "請求日",
+                                                status: billingStatus
+                                            )
+                                        }
+                                    }
                                 }
                             }
                             .onDelete(perform: deleteSubscriptions)
@@ -64,7 +62,7 @@ struct SubscriptionTabView: View {
             }
             .navigationTitle("サブスク")
             .floatingBadge {
-                if !filteredSubscriptions.isEmpty {
+                if let totalAmountText {
                     FloatingBadge {
                         HStack(spacing: 8) {
                             ActiveStatusIndicator(
@@ -72,9 +70,7 @@ struct SubscriptionTabView: View {
                                 statusText: "利用中のサブスクのみを集計"
                             )
 
-                            Text(selectedFilter.totalLabel)
-
-                            Text(totalAmountText)
+                            Text("合計 \(totalAmountText)")
                         }
                     }
                 }
@@ -87,7 +83,6 @@ struct SubscriptionTabView: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    .frame(width: 180)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -96,17 +91,12 @@ struct SubscriptionTabView: View {
                     } label: {
                         Label("サブスクを追加", systemImage: "plus")
                     }
-                    .disabled(!hasPaymentMethods)
                 }
             }
             .sheet(isPresented: $showingAddSheet) {
                 SubscriptionEditorView()
             }
         }
-    }
-
-    private var hasPaymentMethods: Bool {
-        !cards.isEmpty || !banks.isEmpty
     }
 
     private func deleteSubscriptions(offsets: IndexSet) {
@@ -119,6 +109,8 @@ struct SubscriptionTabView: View {
         let matchingSubscriptions: [SubscriptionItem]
 
         switch selectedFilter {
+        case .all:
+            matchingSubscriptions = subscriptions
         case .monthly:
             matchingSubscriptions = subscriptions.filter { $0.billingCycle == .monthly }
         case .yearly:
@@ -134,8 +126,12 @@ struct SubscriptionTabView: View {
         }
     }
 
-    private var totalAmountText: String {
-        totalAmount.formatted(.currency(code: "JPY").precision(.fractionLength(0)))
+    private var totalAmountText: String? {
+        guard let billingCycle = selectedFilter.billingCycle else {
+            return nil
+        }
+
+        return billingCycle.formattedAmount(totalAmount)
     }
 
     private func addSampleData() {
@@ -144,6 +140,7 @@ struct SubscriptionTabView: View {
 }
 
 private enum SubscriptionFilter: String, CaseIterable, Identifiable {
+    case all
     case monthly
     case yearly
 
@@ -151,15 +148,19 @@ private enum SubscriptionFilter: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
+        case .all:
+            "すべて"
         case .monthly:
-            "月額"
+            SubscriptionBillingCycle.monthly.label
         case .yearly:
-            "年額"
+            SubscriptionBillingCycle.yearly.label
         }
     }
 
     var emptyTitle: String {
         switch self {
+        case .all:
+            "サブスクがまだありません"
         case .monthly:
             "月額サブスクがまだありません"
         case .yearly:
@@ -169,6 +170,8 @@ private enum SubscriptionFilter: String, CaseIterable, Identifiable {
 
     var emptyDescription: String {
         switch self {
+        case .all:
+            "サブスクを追加するとここに表示されます。"
         case .monthly:
             "月額サブスクを追加するとここに表示されます。"
         case .yearly:
@@ -176,12 +179,14 @@ private enum SubscriptionFilter: String, CaseIterable, Identifiable {
         }
     }
 
-    var totalLabel: String {
+    var billingCycle: SubscriptionBillingCycle? {
         switch self {
+        case .all:
+            nil
         case .monthly:
-            "月額合計"
+            .monthly
         case .yearly:
-            "年額合計"
+            .yearly
         }
     }
 }

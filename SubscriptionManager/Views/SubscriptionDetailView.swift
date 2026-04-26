@@ -15,45 +15,50 @@ struct SubscriptionDetailView: View {
 
     var body: some View {
         List {
-            Section("基本情報") {
-                LabeledContent("請求サイクル", value: subscription.billingCycle.label)
-                LabeledContent("金額", value: subscription.amount.formatted(.currency(code: "JPY").precision(.fractionLength(0))))
-            }
-
-            if let notes = subscription.trimmedNotes {
-                Section("備考") {
-                    Text(notes)
-                }
-            }
-
-            Section("支払い方法") {
-                LabeledContent("種別", value: subscription.paymentMethod.label)
+            Section("サブスク") {
+                LabeledContent("金額", value: subscription.amountWithBillingCycleText)
 
                 switch subscription.paymentMethod {
                 case .card:
                     if let card = subscription.card {
-                        NavigationLink {
+                        ActiveStatusLabeledNavigationRow(
+                            "カード支払い",
+                            item: card,
+                            title: card.name
+                        ) {
                             CardDetailView(card: card)
-                        } label: {
-                            ActiveStatusRow(card, title: card.name)
                         }
                     } else {
-                        Text("カード未設定")
+                        LabeledContent("カード支払い", value: "未設定")
                             .foregroundStyle(.secondary)
                     }
                 case .bankAccount:
                     if let bank = subscription.bank {
-                        NavigationLink {
+                        ActiveStatusLabeledNavigationRow(
+                            "口座振替",
+                            item: bank,
+                            title: bank.name
+                        ) {
                             BankDetailView(bank: bank)
-                        } label: {
-                            ActiveStatusRow(bank, title: bank.name)
                         }
                     } else {
-                        Text("銀行口座未設定")
+                        LabeledContent("口座振替", value: "未設定")
                             .foregroundStyle(.secondary)
                     }
                 }
+
+                BillingScheduleProgressView(
+                    scheduleLabel: "請求日",
+                    status: subscription.nextBillingStatus
+                )
             }
+
+            if let notes = subscription.trimmedNotes {
+                Section("メモ") {
+                    Text(notes)
+                }
+            }
+
         }
         .navigationTitle(subscription.name)
         .activeStatusBadge(subscription)

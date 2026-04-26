@@ -16,7 +16,7 @@ struct BankDetailView: View {
     var body: some View {
         List {
             if bank.branchName != nil || bank.accountNumber != nil {
-                Section("口座情報") {
+                Section("銀行口座") {
                     if let branchName = bank.branchName {
                         LabeledContent("支店名", value: branchName)
                     }
@@ -28,7 +28,7 @@ struct BankDetailView: View {
             }
 
             if let notes = bank.trimmedNotes {
-                Section("備考") {
+                Section("メモ") {
                     Text(notes)
                 }
             }

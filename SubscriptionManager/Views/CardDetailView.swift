@@ -15,30 +15,33 @@ struct CardDetailView: View {
 
     var body: some View {
         List {
-            if card.lastFourDigits != nil {
-                Section("カード情報") {
-                    if let lastFourDigits = card.lastFourDigits {
-                        LabeledContent("末尾4桁", value: lastFourDigits)
-                    }
+            Section("カード") {
+                if let lastFourDigits = card.lastFourDigits {
+                    LabeledContent("末尾4桁", value: lastFourDigits)
                 }
+
+                if let bank = card.bank {
+                    ActiveStatusLabeledNavigationRow(
+                        "引き落とし口座",
+                        item: bank,
+                        title: bank.name
+                    ) {
+                        BankDetailView(bank: bank)
+                    }
+                } else {
+                    LabeledContent("引き落とし口座", value: "未設定")
+                        .foregroundStyle(.secondary)
+                }
+
+                BillingScheduleProgressView(
+                    scheduleLabel: "引き落とし日",
+                    status: card.nextWithdrawalStatus
+                )
             }
 
             if let notes = card.trimmedNotes {
-                Section("備考") {
+                Section("メモ") {
                     Text(notes)
-                }
-            }
-
-            Section("引き落とし口座") {
-                if let bank = card.bank {
-                    NavigationLink {
-                        BankDetailView(bank: bank)
-                    } label: {
-                        ActiveStatusRow(bank, title: bank.name)
-                    }
-                } else {
-                    Text("未設定")
-                        .foregroundStyle(.secondary)
                 }
             }
 

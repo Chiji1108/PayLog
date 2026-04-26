@@ -15,22 +15,24 @@ struct ElectronicMoneyDetailView: View {
 
     var body: some View {
         List {
-            if let notes = electronicMoney.trimmedNotes {
-                Section("備考") {
-                    Text(notes)
+            Section("電子マネー") {
+                if let card = electronicMoney.card {
+                    ActiveStatusLabeledNavigationRow(
+                        "チャージ元カード",
+                        item: card,
+                        title: card.name
+                    ) {
+                        CardDetailView(card: card)
+                    }
+                } else {
+                    LabeledContent("チャージ元カード", value: "未設定")
+                        .foregroundStyle(.secondary)
                 }
             }
 
-            Section("チャージ元カード") {
-                if let card = electronicMoney.card {
-                    NavigationLink {
-                        CardDetailView(card: card)
-                    } label: {
-                        ActiveStatusRow(card, title: card.name)
-                    }
-                } else {
-                    Text("未設定")
-                        .foregroundStyle(.secondary)
+            if let notes = electronicMoney.trimmedNotes {
+                Section("メモ") {
+                    Text(notes)
                 }
             }
         }

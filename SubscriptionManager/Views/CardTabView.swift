@@ -10,25 +10,17 @@ import SwiftData
 
 struct CardTabView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Bank.name) private var banks: [Bank]
     @Query(sort: \Card.name) private var cards: [Card]
     @State private var showingAddSheet = false
 
     var body: some View {
         NavigationStack {
             Group {
-                if banks.isEmpty {
-                    SampleDataContentUnavailableView(
-                        title: "先に銀行を登録してください",
-                        systemImage: "building.columns",
-                        description: "カードは銀行に紐付きます。まず銀行を追加してください。",
-                        addSampleData: addSampleData
-                    )
-                } else if cards.isEmpty {
+                if cards.isEmpty {
                     SampleDataContentUnavailableView(
                         title: "カードがまだありません",
                         systemImage: "creditcard",
-                        description: "右上の追加ボタンから登録できます。",
+                        description: "右上の追加ボタンから登録できます。引き落とし口座はあとから設定できます。",
                         addSampleData: addSampleData
                     )
                 } else {
@@ -37,7 +29,16 @@ struct CardTabView: View {
                             NavigationLink {
                                 CardDetailView(card: card)
                             } label: {
-                                ActiveStatusRow(card, title: card.name)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    ActiveStatusRow(card, title: card.name)
+
+                                    if card.isActive, let withdrawalStatus = card.nextWithdrawalStatus {
+                                        BillingScheduleProgressView(
+                                            scheduleLabel: "引き落とし日",
+                                            status: withdrawalStatus
+                                        )
+                                    }
+                                }
                             }
                         }
                         .onDelete(perform: deleteCards)
@@ -52,7 +53,6 @@ struct CardTabView: View {
                     } label: {
                         Label("カードを追加", systemImage: "plus")
                     }
-                    .disabled(banks.isEmpty)
                 }
             }
             .sheet(isPresented: $showingAddSheet) {

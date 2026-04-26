@@ -10,25 +10,17 @@ import SwiftData
 
 struct ElectronicMoneyTabView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Card.name) private var cards: [Card]
     @Query(sort: \ElectronicMoney.name) private var electronicMoneys: [ElectronicMoney]
     @State private var showingAddSheet = false
 
     var body: some View {
         NavigationStack {
             Group {
-                if cards.isEmpty {
-                    SampleDataContentUnavailableView(
-                        title: "先にカードを登録してください",
-                        systemImage: "creditcard",
-                        description: "電子マネーはカードに紐付きます。銀行、カードの順で登録してください。",
-                        addSampleData: addSampleData
-                    )
-                } else if electronicMoneys.isEmpty {
+                if electronicMoneys.isEmpty {
                     SampleDataContentUnavailableView(
                         title: "電子マネーがまだありません",
                         systemImage: "iphone.gen3",
-                        description: "右上の追加ボタンから登録できます。",
+                        description: "右上の追加ボタンから登録できます。チャージ元カードはあとから設定できます。",
                         addSampleData: addSampleData
                     )
                 } else {
@@ -52,7 +44,6 @@ struct ElectronicMoneyTabView: View {
                     } label: {
                         Label("電子マネーを追加", systemImage: "plus")
                     }
-                    .disabled(cards.isEmpty)
                 }
             }
             .sheet(isPresented: $showingAddSheet) {

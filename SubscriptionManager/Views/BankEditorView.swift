@@ -34,6 +34,10 @@ struct BankEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("状態") {
+                    Toggle("利用中", isOn: $isActive)
+                }
+
                 Section("基本情報") {
                     TextField("銀行名", text: $name)
                     TextField("支店名", text: $branchName)
@@ -41,13 +45,9 @@ struct BankEditorView: View {
                         .keyboardType(.numberPad)
                 }
 
-                Section("備考") {
+                Section("メモ") {
                     TextEditor(text: $notes)
                         .frame(minHeight: 120)
-                }
-
-                Section("状態") {
-                    Toggle("利用中", isOn: $isActive)
                 }
 
                 if bank != nil {

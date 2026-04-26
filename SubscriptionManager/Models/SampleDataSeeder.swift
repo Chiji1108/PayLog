@@ -29,6 +29,7 @@ enum SampleDataSeeder {
         let visa = Card(
             name: "Olive",
             lastFourDigits: "1234",
+            withdrawalDay: 26,
             notes: "サブスク支払いをまとめているメインカードです。",
             bank: mitsui,
             createdAt: now.addingTimeInterval(-60 * 60 * 24 * 4)
@@ -36,6 +37,7 @@ enum SampleDataSeeder {
         let master = Card(
             name: "MUFG Card",
             lastFourDigits: "9876",
+            withdrawalDay: 10,
             bank: mufg,
             isActive: false,
             createdAt: now.addingTimeInterval(-60 * 60 * 24 * 3)
@@ -57,6 +59,7 @@ enum SampleDataSeeder {
         let netflix = SubscriptionItem(
             name: "Netflix",
             amount: 1490,
+            billingDay: 18,
             billingCycle: .monthly,
             notes: "家族で共有しています。",
             card: visa,
@@ -65,6 +68,8 @@ enum SampleDataSeeder {
         let spotify = SubscriptionItem(
             name: "Spotify",
             amount: 9800,
+            billingDay: 29,
+            billingMonth: 2,
             billingCycle: .yearly,
             card: master,
             isActive: false,
@@ -73,6 +78,7 @@ enum SampleDataSeeder {
         let youtubePremium = SubscriptionItem(
             name: "YouTube Premium",
             amount: 1280,
+            billingDay: 31,
             billingCycle: .monthly,
             card: master,
             isActive: false,
@@ -81,6 +87,7 @@ enum SampleDataSeeder {
         let gymMembership = SubscriptionItem(
             name: "ジム会費",
             amount: 7980,
+            billingDay: 27,
             billingCycle: .monthly,
             paymentMethod: .bankAccount,
             bank: mitsui,
@@ -89,6 +96,8 @@ enum SampleDataSeeder {
         let adobeCreativeCloud = SubscriptionItem(
             name: "Adobe Creative Cloud",
             amount: 72800,
+            billingDay: 30,
+            billingMonth: 11,
             billingCycle: .yearly,
             card: visa,
             createdAt: now
