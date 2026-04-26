@@ -6,7 +6,7 @@
 	<string>development</string>
 	<key>com.apple.developer.icloud-container-identifiers</key>
 	<array>
-		<string>iCloud.tech.chiji.SubscriptionManager</string>
+		<string>iCloud.tech.chiji.PayHub</string>
 	</array>
 	<key>com.apple.developer.icloud-services</key>
 	<array>
