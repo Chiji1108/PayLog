@@ -11,7 +11,7 @@ import SwiftData
 enum CardAnnualFeeSetting: String, CaseIterable, Codable, Identifiable {
     case unspecified
     case free
-    case paid = "subscription"
+    case paid
 
     var id: Self { self }
 
