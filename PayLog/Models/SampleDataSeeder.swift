@@ -127,6 +127,28 @@ enum SampleDataSeeder {
             paymentMethod: .card,
             card: visa
         )
+        let oliveAnnualFee = SubscriptionItem(
+            name: "Olive 年会費",
+            amount: 5500,
+            createdAt: createdAt(minutesAgo: 15),
+            billingUnit: .year,
+            billingAnchorDate: anchoredDate(year: currentYear, month: 5, day: 1),
+            paymentMethod: .card,
+            card: visa
+        )
+        let mufgAnnualFee = SubscriptionItem(
+            name: "MUFG Card 年会費",
+            amount: 1375,
+            createdAt: createdAt(minutesAgo: 170),
+            billingUnit: .year,
+            billingAnchorDate: anchoredDate(year: currentYear, month: 9, day: 15),
+            paymentMethod: .bankAccount,
+            bank: mufg,
+            isActive: false
+        )
+
+        visa.annualFeeSubscription = oliveAnnualFee
+        master.annualFeeSubscription = mufgAnnualFee
 
         context.insert(mitsui)
         context.insert(mufg)
@@ -140,5 +162,7 @@ enum SampleDataSeeder {
         context.insert(petTrimming)
         context.insert(fixedAssetTax)
         context.insert(adobeCreativeCloud)
+        context.insert(oliveAnnualFee)
+        context.insert(mufgAnnualFee)
     }
 }

@@ -143,6 +143,7 @@ final class SubscriptionItem {
     var isActive: Bool = true
     var card: Card?
     var bank: Bank?
+    var annualFeeCard: Card?
 
     var billingUnit: SubscriptionBillingUnit {
         get { SubscriptionBillingUnit(rawValue: billingUnitRawValue) ?? .month }

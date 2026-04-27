@@ -12,6 +12,7 @@ struct CardEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Bank.name) private var banks: [Bank]
+    @Query(sort: \SubscriptionItem.name) private var subscriptions: [SubscriptionItem]
 
     private let card: Card?
     private let onDelete: (() -> Void)?
@@ -22,6 +23,8 @@ struct CardEditorView: View {
     @State private var notes = ""
     @State private var isActive = true
     @State private var selectedBankID: PersistentIdentifier?
+    @State private var annualFeeSetting: CardAnnualFeeSetting
+    @State private var selectedAnnualFeeSubscriptionID: PersistentIdentifier?
     @State private var deleteRequest: DeleteRequest<Card>?
 
     init(card: Card? = nil, onDelete: (() -> Void)? = nil) {
@@ -34,6 +37,8 @@ struct CardEditorView: View {
         _notes = State(initialValue: card?.notes ?? "")
         _isActive = State(initialValue: card?.isActive ?? true)
         _selectedBankID = State(initialValue: card?.bank?.persistentModelID)
+        _annualFeeSetting = State(initialValue: card?.annualFeeSetting ?? .unspecified)
+        _selectedAnnualFeeSubscriptionID = State(initialValue: card?.annualFeeSubscription?.persistentModelID)
     }
 
     var body: some View {
@@ -57,6 +62,28 @@ struct CardEditorView: View {
                             Text(bank.name).tag(Optional(bank.persistentModelID))
                         }
                     }
+                }
+
+                Section {
+                    Picker("料金", selection: $annualFeeSetting) {
+                        ForEach(CardAnnualFeeSetting.allCases) { setting in
+                            Text(setting.label).tag(setting)
+                        }
+                    }
+
+                    if annualFeeSetting == .paid {
+                        Picker("固定費", selection: $selectedAnnualFeeSubscriptionID) {
+                            Text("未設定").tag(Optional<PersistentIdentifier>.none)
+
+                            ForEach(availableAnnualFeeSubscriptions) { subscription in
+                                Text(subscription.name).tag(Optional(subscription.persistentModelID))
+                            }
+                        }
+                    }
+                } header: {
+                    Text("年会費")
+                } footer: {
+                    Text(annualFeeFooterText)
                 }
 
                 if isActive {
@@ -103,6 +130,10 @@ struct CardEditorView: View {
                             card.withdrawalDay = withdrawalDay
                             card.notes = trimmedNotes
                             card.bank = selectedBank
+                            card.annualFeeSetting = annualFeeSetting
+                            card.annualFeeSubscription = annualFeeSetting == .paid
+                                ? selectedAnnualFeeSubscription
+                                : nil
                             card.isActive = isActive
                         } else {
                             let card = Card(
@@ -112,6 +143,10 @@ struct CardEditorView: View {
                                 withdrawalDay: withdrawalDay,
                                 notes: trimmedNotes,
                                 bank: selectedBank,
+                                annualFeeSetting: annualFeeSetting,
+                                annualFeeSubscription: annualFeeSetting == .paid
+                                    ? selectedAnnualFeeSubscription
+                                    : nil,
                                 isActive: isActive
                             )
                             modelContext.insert(card)
@@ -142,6 +177,42 @@ struct CardEditorView: View {
         }
 
         return banks.first { $0.persistentModelID == selectedBankID }
+    }
+
+    private var selectedAnnualFeeSubscription: SubscriptionItem? {
+        guard let selectedAnnualFeeSubscriptionID else {
+            return nil
+        }
+
+        return subscriptions.first { $0.persistentModelID == selectedAnnualFeeSubscriptionID }
+    }
+
+    private var availableAnnualFeeSubscriptions: [SubscriptionItem] {
+        subscriptions
+            .filter { subscription in
+                if subscription.persistentModelID == selectedAnnualFeeSubscriptionID {
+                    return true
+                }
+
+                guard subscription.billingUnit == .year else {
+                    return false
+                }
+
+                guard let annualFeeCard = subscription.annualFeeCard else {
+                    return true
+                }
+
+                return annualFeeCard.persistentModelID == card?.persistentModelID
+            }
+            .sortedForDisplay()
+    }
+
+    private var annualFeeFooterText: String {
+        if annualFeeSetting == .paid, availableAnnualFeeSubscriptions.isEmpty {
+            return "有料を選んだ場合は固定費も紐づけられます。まだ候補の年単位固定費がありません。"
+        }
+
+        return "有料を選んだ場合は固定費も紐づけられます。候補には年単位の固定費だけ表示し、別カードの年会費に使っている固定費は除外します。"
     }
 
     private func normalizedOptionalText(_ text: String) -> String? {

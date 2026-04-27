@@ -52,6 +52,20 @@ struct CardDetailView: View {
                         Text("未設定")
                     }
                 }
+
+                if let annualFeeSubscription = card.annualFeeSubscription {
+                    ActiveStatusLabeledNavigationRow(
+                        "年会費",
+                        item: annualFeeSubscription,
+                        title: annualFeeSubscription.name
+                    ) {
+                        SubscriptionDetailView(subscription: annualFeeSubscription)
+                    }
+                } else {
+                    LabeledContent("年会費") {
+                        Text(card.annualFeeSetting.label)
+                    }
+                }
             }
 
             Section("メモ") {
