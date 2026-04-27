@@ -10,7 +10,7 @@ import SwiftData
 
 struct SubscriptionTabView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \SubscriptionItem.name) private var subscriptions: [SubscriptionItem]
+    @Query private var subscriptions: [SubscriptionItem]
     @State private var showingAddSheet = false
     @State private var selectedFilter: SubscriptionFilter = .all
 
@@ -19,7 +19,7 @@ struct SubscriptionTabView: View {
             Group {
                 if subscriptions.isEmpty {
                     SampleDataContentUnavailableView(
-                        title: "サブスクがまだありません",
+                        title: "固定費がまだありません",
                         systemImage: "repeat.circle",
                         description: "カードや銀行口座を登録しておくと、スムーズに追加できます。",
                         addSampleData: addSampleData
@@ -39,20 +39,7 @@ struct SubscriptionTabView: View {
                                 NavigationLink {
                                     SubscriptionDetailView(subscription: subscription)
                                 } label: {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        ActiveStatusRow(
-                                            subscription,
-                                            title: subscription.name,
-                                            trailingText: subscription.amountWithBillingCycleText
-                                        )
-
-                                        if subscription.isActive, let billingStatus = subscription.nextBillingStatus {
-                                            BillingScheduleProgressView(
-                                                scheduleLabel: "請求日",
-                                                status: billingStatus
-                                            )
-                                        }
-                                    }
+                                    SubscriptionRow(subscription: subscription)
                                 }
                             }
                             .onDelete(perform: deleteSubscriptions)
@@ -60,41 +47,38 @@ struct SubscriptionTabView: View {
                     }
                 }
             }
-            .navigationTitle("サブスク")
-            .floatingBadge {
-                if let totalAmountText {
-                    FloatingBadge {
-                        HStack(spacing: 8) {
-                            ActiveStatusIndicator(
-                                isActive: true,
-                                statusText: "利用中のサブスクのみを集計"
-                            )
-
-                            Text("合計 \(totalAmountText)")
-                        }
-                    }
-                }
-            }
+            .navigationTitle("固定費")
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Picker("請求サイクル", selection: $selectedFilter) {
-                        ForEach(SubscriptionFilter.allCases) { filter in
-                            Text(filter.label).tag(filter)
+                ToolbarItem(placement: .topBarLeading) {
+                    Menu {
+                        Picker("請求サイクル", selection: $selectedFilter) {
+                            Text("すべて").tag(SubscriptionFilter.all)
+
+                            ForEach(availableFrequencies) { frequency in
+                                Text(frequency.filterLabel).tag(SubscriptionFilter.frequency(frequency))
+                            }
                         }
+                    } label: {
+                        Image(systemName: "line.3.horizontal.decrease")
                     }
-                    .pickerStyle(.segmented)
+                    .accessibilityLabel("請求サイクルで絞り込む")
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
                         showingAddSheet = true
                     } label: {
-                        Label("サブスクを追加", systemImage: "plus")
+                        Label("固定費を追加", systemImage: "plus")
                     }
                 }
             }
             .sheet(isPresented: $showingAddSheet) {
                 SubscriptionEditorView()
+            }
+            .onChange(of: availableFrequencies) { _, newValue in
+                if case let .frequency(frequency) = selectedFilter, !newValue.contains(frequency) {
+                    selectedFilter = .all
+                }
             }
         }
     }
@@ -105,37 +89,19 @@ struct SubscriptionTabView: View {
         }
     }
 
-    private func deleteSubscription(_ subscription: SubscriptionItem) {
-        modelContext.delete(subscription)
-    }
-
     private var filteredSubscriptions: [SubscriptionItem] {
-        let matchingSubscriptions: [SubscriptionItem]
+        let sortedSubscriptions = subscriptions.sortedForDisplay()
 
-        switch selectedFilter {
+        return switch selectedFilter {
         case .all:
-            matchingSubscriptions = subscriptions
-        case .monthly:
-            matchingSubscriptions = subscriptions.filter { $0.billingCycle == .monthly }
-        case .yearly:
-            matchingSubscriptions = subscriptions.filter { $0.billingCycle == .yearly }
-        }
-
-        return matchingSubscriptions.sortedForDisplay()
-    }
-
-    private var totalAmount: Int {
-        filteredSubscriptions.filter(\.isActive).reduce(0) { partialResult, subscription in
-            partialResult + subscription.amount
+            sortedSubscriptions
+        case let .frequency(frequency):
+            sortedSubscriptions.filter { $0.billingFrequency == frequency }
         }
     }
 
-    private var totalAmountText: String? {
-        guard let billingCycle = selectedFilter.billingCycle else {
-            return nil
-        }
-
-        return billingCycle.formattedAmount(totalAmount)
+    private var availableFrequencies: [SubscriptionBillingFrequency] {
+        Array(Set(subscriptions.map(\.billingFrequency))).sorted()
     }
 
     private func addSampleData() {
@@ -143,54 +109,66 @@ struct SubscriptionTabView: View {
     }
 }
 
-private enum SubscriptionFilter: String, CaseIterable, Identifiable {
+private enum SubscriptionFilter: Hashable, Identifiable {
     case all
-    case monthly
-    case yearly
+    case frequency(SubscriptionBillingFrequency)
 
-    var id: Self { self }
-
-    var label: String {
+    var id: String {
         switch self {
         case .all:
-            "すべて"
-        case .monthly:
-            SubscriptionBillingCycle.monthly.label
-        case .yearly:
-            SubscriptionBillingCycle.yearly.label
+            "all"
+        case let .frequency(frequency):
+            frequency.id
+        }
+    }
+
+    var frequency: SubscriptionBillingFrequency? {
+        switch self {
+        case .all:
+            nil
+        case let .frequency(frequency):
+            frequency
         }
     }
 
     var emptyTitle: String {
         switch self {
         case .all:
-            "サブスクがまだありません"
-        case .monthly:
-            "月額サブスクがまだありません"
-        case .yearly:
-            "年額サブスクがまだありません"
+            "固定費がまだありません"
+        case let .frequency(frequency):
+            "\(frequency.filterLabel)の固定費がまだありません"
         }
     }
 
     var emptyDescription: String {
         switch self {
         case .all:
-            "サブスクを追加するとここに表示されます。"
-        case .monthly:
-            "月額サブスクを追加するとここに表示されます。"
-        case .yearly:
-            "年額サブスクを追加するとここに表示されます。"
+            "固定費を追加するとここに表示されます。"
+        case let .frequency(frequency):
+            "\(frequency.filterLabel)の固定費を追加するとここに表示されます。"
         }
     }
+}
 
-    var billingCycle: SubscriptionBillingCycle? {
-        switch self {
-        case .all:
-            nil
-        case .monthly:
-            .monthly
-        case .yearly:
-            .yearly
+private struct SubscriptionRow: View {
+    let subscription: SubscriptionItem
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ActiveStatusRow(
+                subscription,
+                title: subscription.name,
+                trailingText: subscription.amountWithBillingCycleText
+            )
+
+            if subscription.isActive, let billingStatus = subscription.nextBillingStatus {
+                BillingScheduleProgressView(
+                    scheduleLabel: "請求日",
+                    countdownLabel: subscription.billingCountdownLabel,
+                    status: billingStatus,
+                    isActive: subscription.isActive
+                )
+            }
         }
     }
 }

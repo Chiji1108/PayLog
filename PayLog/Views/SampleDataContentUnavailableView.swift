@@ -37,7 +37,7 @@ struct SampleDataContentUnavailableView: View {
                 Button("キャンセル", role: .cancel) {
                 }
             } message: {
-                Text("銀行口座・カード・電子マネー・サブスクのサンプルデータをまとめて追加します。")
+                Text("銀行口座・カード・電子マネー・固定費のサンプルデータをまとめて追加します。")
             }
         }
     }

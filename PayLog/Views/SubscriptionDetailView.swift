@@ -15,53 +15,63 @@ struct SubscriptionDetailView: View {
 
     var body: some View {
         List {
-            Section("サブスク") {
+            Section("固定費") {
+                ActiveStatusLabeledContent(item: subscription)
                 LabeledContent("金額", value: subscription.amountWithBillingCycleText)
+                BillingScheduleProgressView(
+                    scheduleLabel: "請求日",
+                    countdownLabel: subscription.billingCountdownLabel,
+                    status: subscription.nextBillingStatus,
+                    isActive: subscription.isActive
+                )
+                LabeledContent("支払い方法", value: subscription.paymentMethod.label)
 
                 switch subscription.paymentMethod {
                 case .card:
                     if let card = subscription.card {
                         ActiveStatusLabeledNavigationRow(
-                            "カード支払い",
+                            "支払いカード",
                             item: card,
                             title: card.name
                         ) {
                             CardDetailView(card: card)
                         }
                     } else {
-                        LabeledContent("カード支払い", value: "未設定")
-                            .foregroundStyle(.secondary)
+                        LabeledContent("支払いカード") {
+                            Text("未設定")
+                        }
                     }
                 case .bankAccount:
                     if let bank = subscription.bank {
                         ActiveStatusLabeledNavigationRow(
-                            "口座振替",
+                            "引き落とし口座",
                             item: bank,
                             title: bank.name
                         ) {
                             BankDetailView(bank: bank)
                         }
                     } else {
-                        LabeledContent("口座振替", value: "未設定")
-                            .foregroundStyle(.secondary)
+                        LabeledContent("引き落とし口座") {
+                            Text("未設定")
+                        }
                     }
+                case .invoice, .onSite, .unspecified:
+                    EmptyView()
                 }
 
-                BillingScheduleProgressView(
-                    scheduleLabel: "請求日",
-                    status: subscription.nextBillingStatus
-                )
             }
 
-            if let notes = subscription.trimmedNotes {
-                Section("メモ") {
+            Section("メモ") {
+                if let notes = subscription.trimmedNotes {
                     Text(notes)
+                } else {
+                    Text("未設定")
+                        .foregroundStyle(.secondary)
                 }
             }
 
         }
         .navigationTitle(subscription.name)
-        .activeStatusBadge(subscription)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("編集") {

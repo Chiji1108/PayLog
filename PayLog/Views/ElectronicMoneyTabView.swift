@@ -10,7 +10,7 @@ import SwiftData
 
 struct ElectronicMoneyTabView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \ElectronicMoney.name) private var electronicMoneys: [ElectronicMoney]
+    @Query private var electronicMoneys: [ElectronicMoney]
     @State private var showingAddSheet = false
 
     var body: some View {
@@ -29,7 +29,7 @@ struct ElectronicMoneyTabView: View {
                             NavigationLink {
                                 ElectronicMoneyDetailView(electronicMoney: electronicMoney)
                             } label: {
-                                ActiveStatusRow(electronicMoney, title: electronicMoney.name)
+                                ElectronicMoneyRow(electronicMoney: electronicMoney)
                             }
                         }
                         .onDelete(perform: deleteElectronicMoneys)
@@ -38,7 +38,7 @@ struct ElectronicMoneyTabView: View {
             }
             .navigationTitle("電子マネー")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
                         showingAddSheet = true
                     } label: {
@@ -58,16 +58,20 @@ struct ElectronicMoneyTabView: View {
         }
     }
 
-    private func deleteElectronicMoney(_ electronicMoney: ElectronicMoney) {
-        modelContext.delete(electronicMoney)
-    }
-
     private var displayedElectronicMoneys: [ElectronicMoney] {
         electronicMoneys.sortedForDisplay()
     }
 
     private func addSampleData() {
         SampleDataSeeder.seed(in: modelContext)
+    }
+}
+
+private struct ElectronicMoneyRow: View {
+    let electronicMoney: ElectronicMoney
+
+    var body: some View {
+        ActiveStatusRow(electronicMoney, title: electronicMoney.name)
     }
 }
 

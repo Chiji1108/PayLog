@@ -18,10 +18,10 @@ struct SubscriptionEditorView: View {
     private let onDelete: (() -> Void)?
     @State private var name = ""
     @State private var amount: Int?
-    @State private var billingDay: Int?
-    @State private var billingMonth: Int?
-    @State private var billingCycle: SubscriptionBillingCycle = .monthly
-    @State private var paymentMethod: SubscriptionPaymentMethod = .card
+    @State private var billingInterval = 1
+    @State private var billingUnit: SubscriptionBillingUnit = .month
+    @State private var billingAnchorDate = Calendar.autoupdatingCurrent.startOfDay(for: Date.now)
+    @State private var paymentMethod: SubscriptionPaymentMethod = .unspecified
     @State private var notes = ""
     @State private var isActive = true
     @State private var selectedCardID: PersistentIdentifier?
@@ -33,10 +33,12 @@ struct SubscriptionEditorView: View {
         self.onDelete = onDelete
         _name = State(initialValue: subscription?.name ?? "")
         _amount = State(initialValue: subscription?.amount)
-        _billingDay = State(initialValue: subscription?.billingDay)
-        _billingMonth = State(initialValue: subscription?.billingMonth)
-        _billingCycle = State(initialValue: subscription?.billingCycle ?? .monthly)
-        _paymentMethod = State(initialValue: subscription?.paymentMethod ?? .card)
+        _billingInterval = State(initialValue: max(subscription?.billingInterval ?? 1, 1))
+        _billingUnit = State(initialValue: subscription?.billingUnit ?? .month)
+        _billingAnchorDate = State(
+            initialValue: Calendar.autoupdatingCurrent.startOfDay(for: subscription?.billingAnchorDate ?? .now)
+        )
+        _paymentMethod = State(initialValue: subscription?.paymentMethod ?? .unspecified)
         _notes = State(initialValue: subscription?.notes ?? "")
         _isActive = State(initialValue: subscription?.isActive ?? true)
         _selectedCardID = State(initialValue: subscription?.card?.persistentModelID)
@@ -51,34 +53,28 @@ struct SubscriptionEditorView: View {
                 }
 
                 Section("基本情報") {
-                    TextField("サブスク名", text: $name)
-                    Picker("請求サイクル", selection: $billingCycle) {
-                        ForEach(SubscriptionBillingCycle.allCases) { cycle in
-                            Text(cycle.label).tag(cycle)
-                        }
-                    }
-                    TextField("金額", value: $amount, format: .number)
-                        .keyboardType(.numberPad)
+                    TextField("固定費名", text: $name)
                 }
 
-                if isActive {
-                    Section {
-                        switch billingCycle {
-                        case .monthly:
-                            DayOfMonthPicker(title: "請求日", selection: $billingDay)
-                        case .yearly:
-                            MonthDayPicker(
-                                monthTitle: "請求月",
-                                dayTitle: "請求日",
-                                monthSelection: $billingMonth,
-                                daySelection: $billingDay
-                            )
-                        }
-                    } header: {
-                        Text("請求スケジュール")
-                    } footer: {
-                        Text("存在しない日は月末に丸めます。2月29日は平年では2月28日扱いです。")
+                Section {
+                    TextField("金額", value: $amount, format: .number)
+                        .keyboardType(.numberPad)
+
+                    Stepper(value: $billingInterval, in: 1...24) {
+                        LabeledContent("間隔", value: billingFrequency.intervalDescription)
                     }
+
+                    Picker("単位", selection: $billingUnit) {
+                        ForEach(SubscriptionBillingUnit.allCases) { unit in
+                            Text(unit.label).tag(unit)
+                        }
+                    }
+
+                    DatePicker("基準日", selection: $billingAnchorDate, displayedComponents: .date)
+                } header: {
+                    Text("請求情報")
+                } footer: {
+                    Text(billingScheduleFooter)
                 }
 
                 Section("支払い方法") {
@@ -115,6 +111,8 @@ struct SubscriptionEditorView: View {
                                 }
                             }
                         }
+                    case .invoice, .onSite, .unspecified:
+                        EmptyView()
                     }
                 }
 
@@ -125,7 +123,7 @@ struct SubscriptionEditorView: View {
 
                 if subscription != nil {
                     Section("削除") {
-                        Button("サブスクを削除", role: .destructive) {
+                        Button("固定費を削除", role: .destructive) {
                             guard let subscription else {
                                 return
                             }
@@ -136,12 +134,7 @@ struct SubscriptionEditorView: View {
                     }
                 }
             }
-            .navigationTitle(subscription == nil ? "サブスクを追加" : "サブスクを編集")
-            .onChange(of: billingCycle) { _, newValue in
-                if newValue == .monthly {
-                    billingMonth = nil
-                }
-            }
+            .navigationTitle(subscription == nil ? "固定費を追加" : "固定費を編集")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("キャンセル") {
@@ -161,9 +154,9 @@ struct SubscriptionEditorView: View {
                         if let subscription {
                             subscription.name = trimmedName
                             subscription.amount = amount
-                            subscription.billingDay = billingDay
-                            subscription.billingMonth = normalizedBillingMonth
-                            subscription.billingCycle = billingCycle
+                            subscription.billingInterval = billingInterval
+                            subscription.billingUnit = billingUnit
+                            subscription.billingAnchorDate = normalizedAnchorDate
                             subscription.paymentMethod = paymentMethod
                             subscription.notes = trimmedNotes
                             subscription.card = selectedCard
@@ -173,9 +166,9 @@ struct SubscriptionEditorView: View {
                             let subscription = SubscriptionItem(
                                 name: trimmedName,
                                 amount: amount,
-                                billingDay: billingDay,
-                                billingMonth: normalizedBillingMonth,
-                                billingCycle: billingCycle,
+                                billingInterval: billingInterval,
+                                billingUnit: billingUnit,
+                                billingAnchorDate: normalizedAnchorDate,
                                 paymentMethod: paymentMethod,
                                 notes: trimmedNotes,
                                 card: selectedCard,
@@ -186,7 +179,7 @@ struct SubscriptionEditorView: View {
                         }
                         dismiss()
                     }
-                    .disabled(trimmedName.isEmpty || !hasValidAmount || !hasValidBillingSchedule)
+                    .disabled(trimmedName.isEmpty || !hasValidAmount)
                 }
             }
         }
@@ -217,6 +210,14 @@ struct SubscriptionEditorView: View {
         return banks.first { $0.persistentModelID == selectedBankID }
     }
 
+    private var billingFrequency: SubscriptionBillingFrequency {
+        SubscriptionBillingFrequency(interval: billingInterval, unit: billingUnit)
+    }
+
+    private var normalizedAnchorDate: Date {
+        Calendar.autoupdatingCurrent.startOfDay(for: billingAnchorDate)
+    }
+
     private var hasValidAmount: Bool {
         guard let amount else {
             return false
@@ -225,20 +226,14 @@ struct SubscriptionEditorView: View {
         return amount > 0
     }
 
-    private var normalizedBillingMonth: Int? {
-        billingCycle == .yearly ? billingMonth : nil
-    }
-
-    private var hasValidBillingSchedule: Bool {
-        guard isActive else {
-            return true
-        }
-
-        switch billingCycle {
-        case .monthly:
-            return true
-        case .yearly:
-            return (billingMonth == nil && billingDay == nil) || (billingMonth != nil && billingDay != nil)
+    private var billingScheduleFooter: String {
+        switch billingUnit {
+        case .week:
+            "選んだ基準日を起点に、同じ曜日で繰り返します。2週間以上では基準日も周期の判定に使います。"
+        case .month:
+            "選んだ基準日を起点に、同じ日付で繰り返します。存在しない日は月末に丸めます。"
+        case .year:
+            "選んだ基準日を起点に、同じ月日で繰り返します。2月29日は平年では2月28日扱いです。"
         }
     }
 

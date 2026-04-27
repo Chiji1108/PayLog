@@ -10,7 +10,7 @@ import SwiftData
 
 struct BankTabView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Bank.name) private var banks: [Bank]
+    @Query private var banks: [Bank]
     @State private var showingAddSheet = false
 
     var body: some View {
@@ -20,7 +20,7 @@ struct BankTabView: View {
                     SampleDataContentUnavailableView(
                         title: "銀行口座がまだありません",
                         systemImage: "building.columns",
-                        description: "最初に銀行口座を登録すると、次にカードやサブスクを紐付けできます。",
+                        description: "最初に銀行口座を登録すると、次にカードや固定費を紐付けできます。",
                         addSampleData: addSampleData
                     )
                 } else {
@@ -29,7 +29,7 @@ struct BankTabView: View {
                             NavigationLink {
                                 BankDetailView(bank: bank)
                             } label: {
-                                ActiveStatusRow(bank, title: bank.name)
+                                BankRow(bank: bank)
                             }
                         }
                         .onDelete(perform: deleteBanks)
@@ -38,7 +38,7 @@ struct BankTabView: View {
             }
             .navigationTitle("銀行口座")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
                         showingAddSheet = true
                     } label: {
@@ -58,16 +58,20 @@ struct BankTabView: View {
         }
     }
 
-    private func deleteBank(_ bank: Bank) {
-        modelContext.delete(bank)
-    }
-
     private var displayedBanks: [Bank] {
         banks.sortedForDisplay()
     }
 
     private func addSampleData() {
         SampleDataSeeder.seed(in: modelContext)
+    }
+}
+
+private struct BankRow: View {
+    let bank: Bank
+
+    var body: some View {
+        ActiveStatusRow(bank, title: bank.name)
     }
 }
 

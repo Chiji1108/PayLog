@@ -51,172 +51,248 @@ enum BillingScheduleCalculator {
         return day
     }
 
-    static func normalizedMonth(_ month: Int?) -> Int? {
-        guard let month, (1...12).contains(month) else {
-            return nil
-        }
-
-        return month
-    }
-
-    static func maximumDay(in month: Int?) -> Int {
-        switch month {
-        case 2:
-            29
-        case 4, 6, 9, 11:
-            30
-        default:
-            31
-        }
-    }
-
-    static func monthlyStatus(
+    static func monthlyAnchorDate(
         day: Int,
         referenceDate: Date = .now,
         calendar: Calendar = .autoupdatingCurrent
-    ) -> BillingScheduleStatus? {
+    ) -> Date? {
         guard let normalizedDay = normalizedDay(day) else {
             return nil
         }
 
         let startOfReferenceDate = calendar.startOfDay(for: referenceDate)
-        let referenceComponents = calendar.dateComponents([.year, .month], from: startOfReferenceDate)
+        let components = calendar.dateComponents([.year, .month], from: startOfReferenceDate)
 
-        guard let year = referenceComponents.year,
-              let month = referenceComponents.month,
-              let currentOccurrence = occurrence(day: normalizedDay, year: year, month: month, calendar: calendar) else {
+        guard let year = components.year,
+              let month = components.month else {
             return nil
         }
 
-        if currentOccurrence <= startOfReferenceDate {
-            guard let nextMonth = calendar.date(byAdding: .month, value: 1, to: currentOccurrence) else {
-                return nil
-            }
+        let resolvedDay = min(normalizedDay, dayCount(in: month, year: year, calendar: calendar))
+        return calendar.date(from: DateComponents(year: year, month: month, day: resolvedDay))
+    }
 
-            let nextComponents = calendar.dateComponents([.year, .month], from: nextMonth)
+    static func recurringStatus(
+        unit: SubscriptionBillingUnit,
+        interval: Int,
+        anchorDate: Date,
+        referenceDate: Date = .now,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> BillingScheduleStatus? {
+        let normalizedInterval = max(interval, 1)
+        let startOfAnchorDate = calendar.startOfDay(for: anchorDate)
+        let startOfReferenceDate = calendar.startOfDay(for: referenceDate)
 
-            guard let nextYear = nextComponents.year,
-                  let nextMonthValue = nextComponents.month,
-                  let nextOccurrence = occurrence(
-                    day: normalizedDay,
-                    year: nextYear,
-                    month: nextMonthValue,
-                    calendar: calendar
-                  ) else {
-                return nil
-            }
-
-            return BillingScheduleStatus(
-                previousDate: currentOccurrence,
-                nextDate: nextOccurrence,
+        switch unit {
+        case .week:
+            return weeklyStatus(
+                interval: normalizedInterval,
+                anchorDate: startOfAnchorDate,
+                referenceDate: startOfReferenceDate,
+                calendar: calendar
+            )
+        case .month:
+            return monthlyRecurringStatus(
+                interval: normalizedInterval,
+                anchorDate: startOfAnchorDate,
+                referenceDate: startOfReferenceDate,
+                calendar: calendar
+            )
+        case .year:
+            return yearlyRecurringStatus(
+                interval: normalizedInterval,
+                anchorDate: startOfAnchorDate,
                 referenceDate: startOfReferenceDate,
                 calendar: calendar
             )
         }
+    }
 
-        guard let previousMonth = calendar.date(byAdding: .month, value: -1, to: currentOccurrence) else {
-            return nil
-        }
+    private static func weeklyStatus(
+        interval: Int,
+        anchorDate: Date,
+        referenceDate: Date,
+        calendar: Calendar
+    ) -> BillingScheduleStatus? {
+        let dayDifference = calendar.dateComponents([.day], from: anchorDate, to: referenceDate).day ?? 0
+        let intervalInDays = interval * 7
+        let intervalsElapsed = floorDiv(dayDifference, by: intervalInDays)
 
-        let previousComponents = calendar.dateComponents([.year, .month], from: previousMonth)
-
-        guard let previousYear = previousComponents.year,
-              let previousMonthValue = previousComponents.month,
-              let previousOccurrence = occurrence(
-                day: normalizedDay,
-                year: previousYear,
-                month: previousMonthValue,
-                calendar: calendar
-              ) else {
+        guard let previousDate = calendar.date(byAdding: .day, value: intervalsElapsed * intervalInDays, to: anchorDate),
+              let nextDate = calendar.date(byAdding: .day, value: intervalInDays, to: previousDate) else {
             return nil
         }
 
         return BillingScheduleStatus(
-            previousDate: previousOccurrence,
-            nextDate: currentOccurrence,
-            referenceDate: startOfReferenceDate,
+            previousDate: previousDate,
+            nextDate: nextDate,
+            referenceDate: referenceDate,
             calendar: calendar
         )
     }
 
-    static func yearlyStatus(
-        month: Int,
-        day: Int,
-        referenceDate: Date = .now,
-        calendar: Calendar = .autoupdatingCurrent
+    private static func monthlyRecurringStatus(
+        interval: Int,
+        anchorDate: Date,
+        referenceDate: Date,
+        calendar: Calendar
     ) -> BillingScheduleStatus? {
-        guard let normalizedMonth = normalizedMonth(month),
-              let normalizedDay = normalizedDay(day) else {
-            return nil
-        }
+        let anchorComponents = calendar.dateComponents([.year, .month, .day], from: anchorDate)
+        let monthDifference = totalMonthDifference(from: anchorDate, to: referenceDate, calendar: calendar)
+        var intervalsElapsed = floorDiv(monthDifference, by: interval)
 
-        let startOfReferenceDate = calendar.startOfDay(for: referenceDate)
-        let referenceYear = calendar.component(.year, from: startOfReferenceDate)
-
-        guard let currentOccurrence = occurrence(
-            month: normalizedMonth,
-            day: normalizedDay,
-            year: referenceYear,
+        guard var previousDate = monthlyOccurrence(
+            for: intervalsElapsed,
+            interval: interval,
+            anchorComponents: anchorComponents,
             calendar: calendar
         ) else {
             return nil
         }
 
-        if currentOccurrence <= startOfReferenceDate {
-            guard let nextOccurrence = occurrence(
-                month: normalizedMonth,
-                day: normalizedDay,
-                year: referenceYear + 1,
+        while previousDate > referenceDate {
+            intervalsElapsed -= 1
+
+            guard let adjustedDate = monthlyOccurrence(
+                for: intervalsElapsed,
+                interval: interval,
+                anchorComponents: anchorComponents,
                 calendar: calendar
             ) else {
                 return nil
             }
 
-            return BillingScheduleStatus(
-                previousDate: currentOccurrence,
-                nextDate: nextOccurrence,
-                referenceDate: startOfReferenceDate,
-                calendar: calendar
-            )
+            previousDate = adjustedDate
         }
 
-        guard let previousOccurrence = occurrence(
-            month: normalizedMonth,
-            day: normalizedDay,
-            year: referenceYear - 1,
+        guard let nextDate = monthlyOccurrence(
+            for: intervalsElapsed + 1,
+            interval: interval,
+            anchorComponents: anchorComponents,
             calendar: calendar
         ) else {
             return nil
         }
 
         return BillingScheduleStatus(
-            previousDate: previousOccurrence,
-            nextDate: currentOccurrence,
-            referenceDate: startOfReferenceDate,
+            previousDate: previousDate,
+            nextDate: nextDate,
+            referenceDate: referenceDate,
             calendar: calendar
         )
     }
 
-    private static func occurrence(
-        day: Int,
-        year: Int,
-        month: Int,
+    private static func yearlyRecurringStatus(
+        interval: Int,
+        anchorDate: Date,
+        referenceDate: Date,
         calendar: Calendar
-    ) -> Date? {
-        let resolvedDay = clampedDay(day, year: year, month: month, calendar: calendar)
-        let components = DateComponents(year: year, month: month, day: resolvedDay)
-        return calendar.date(from: components)
+    ) -> BillingScheduleStatus? {
+        let anchorComponents = calendar.dateComponents([.year, .month, .day], from: anchorDate)
+        let yearDifference = totalYearDifference(from: anchorDate, to: referenceDate, calendar: calendar)
+        var intervalsElapsed = floorDiv(yearDifference, by: interval)
+
+        guard var previousDate = yearlyOccurrence(
+            for: intervalsElapsed,
+            interval: interval,
+            anchorComponents: anchorComponents,
+            calendar: calendar
+        ) else {
+            return nil
+        }
+
+        while previousDate > referenceDate {
+            intervalsElapsed -= 1
+
+            guard let adjustedDate = yearlyOccurrence(
+                for: intervalsElapsed,
+                interval: interval,
+                anchorComponents: anchorComponents,
+                calendar: calendar
+            ) else {
+                return nil
+            }
+
+            previousDate = adjustedDate
+        }
+
+        guard let nextDate = yearlyOccurrence(
+            for: intervalsElapsed + 1,
+            interval: interval,
+            anchorComponents: anchorComponents,
+            calendar: calendar
+        ) else {
+            return nil
+        }
+
+        return BillingScheduleStatus(
+            previousDate: previousDate,
+            nextDate: nextDate,
+            referenceDate: referenceDate,
+            calendar: calendar
+        )
     }
 
-    private static func occurrence(
-        month: Int,
-        day: Int,
-        year: Int,
+    private static func monthlyOccurrence(
+        for intervalIndex: Int,
+        interval: Int,
+        anchorComponents: DateComponents,
         calendar: Calendar
     ) -> Date? {
-        let resolvedDay = clampedDay(day, year: year, month: month, calendar: calendar)
-        let components = DateComponents(year: year, month: month, day: resolvedDay)
-        return calendar.date(from: components)
+        guard let anchorYear = anchorComponents.year,
+              let anchorMonth = anchorComponents.month,
+              let anchorDay = anchorComponents.day else {
+            return nil
+        }
+
+        let totalMonths = (anchorYear * 12) + (anchorMonth - 1) + (intervalIndex * interval)
+        let year = floorDiv(totalMonths, by: 12)
+        let month = totalMonths - (year * 12) + 1
+        let resolvedDay = clampedDay(anchorDay, year: year, month: month, calendar: calendar)
+        return calendar.date(from: DateComponents(year: year, month: month, day: resolvedDay))
+    }
+
+    private static func yearlyOccurrence(
+        for intervalIndex: Int,
+        interval: Int,
+        anchorComponents: DateComponents,
+        calendar: Calendar
+    ) -> Date? {
+        guard let anchorYear = anchorComponents.year,
+              let anchorMonth = anchorComponents.month,
+              let anchorDay = anchorComponents.day else {
+            return nil
+        }
+
+        let year = anchorYear + (intervalIndex * interval)
+        let resolvedDay = clampedDay(anchorDay, year: year, month: anchorMonth, calendar: calendar)
+        return calendar.date(from: DateComponents(year: year, month: anchorMonth, day: resolvedDay))
+    }
+
+    private static func totalMonthDifference(from startDate: Date, to endDate: Date, calendar: Calendar) -> Int {
+        let startComponents = calendar.dateComponents([.year, .month], from: startDate)
+        let endComponents = calendar.dateComponents([.year, .month], from: endDate)
+
+        let startMonthValue = (startComponents.year ?? 0) * 12 + (startComponents.month ?? 1)
+        let endMonthValue = (endComponents.year ?? 0) * 12 + (endComponents.month ?? 1)
+        return endMonthValue - startMonthValue
+    }
+
+    private static func totalYearDifference(from startDate: Date, to endDate: Date, calendar: Calendar) -> Int {
+        let startYear = calendar.component(.year, from: startDate)
+        let endYear = calendar.component(.year, from: endDate)
+        return endYear - startYear
+    }
+
+    private static func floorDiv(_ dividend: Int, by divisor: Int) -> Int {
+        let quotient = dividend / divisor
+        let remainder = dividend % divisor
+
+        if remainder != 0, dividend < 0 {
+            return quotient - 1
+        }
+
+        return quotient
     }
 
     // Clamp recurring day values to the last valid day of the target month.
@@ -238,80 +314,153 @@ enum BillingScheduleCalculator {
 
         guard let date = calendar.date(from: components),
               let range = calendar.range(of: .day, in: .month, for: date) else {
-            return maximumDay(in: month)
+            return fallbackDayCount(in: month)
         }
 
         return range.count
     }
+
+    private static func dayCount(
+        in month: Int,
+        year: Int,
+        calendar: Calendar
+    ) -> Int {
+        daysInMonth(year: year, month: month, calendar: calendar)
+    }
+
+    private static func fallbackDayCount(in month: Int) -> Int {
+        switch month {
+        case 2:
+            29
+        case 4, 6, 9, 11:
+            30
+        default:
+            31
+        }
+    }
 }
 
 extension Card {
+    var normalizedClosingDay: Int? {
+        BillingScheduleCalculator.normalizedDay(closingDay)
+    }
+
     var normalizedWithdrawalDay: Int? {
         BillingScheduleCalculator.normalizedDay(withdrawalDay)
     }
 
-    var withdrawalDayText: String? {
-        guard let normalizedWithdrawalDay else {
+    private func monthlyAnchorDate(
+        day: Int?,
+        referenceDate: Date = .now,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Date? {
+        guard let day else {
             return nil
         }
 
-        return "\(normalizedWithdrawalDay)日"
+        return BillingScheduleCalculator.monthlyAnchorDate(
+            day: day,
+            referenceDate: referenceDate,
+            calendar: calendar
+        )
+    }
+
+    func closingAnchorDate(
+        referenceDate: Date = .now,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Date? {
+        monthlyAnchorDate(
+            day: closingDay,
+            referenceDate: referenceDate,
+            calendar: calendar
+        )
+    }
+
+    func withdrawalAnchorDate(
+        referenceDate: Date = .now,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Date? {
+        monthlyAnchorDate(
+            day: withdrawalDay,
+            referenceDate: referenceDate,
+            calendar: calendar
+        )
+    }
+
+    var nextClosingStatus: BillingScheduleStatus? {
+        guard let closingAnchorDate = closingAnchorDate() else {
+            return nil
+        }
+
+        return BillingScheduleCalculator.recurringStatus(
+            unit: .month,
+            interval: 1,
+            anchorDate: closingAnchorDate
+        )
     }
 
     var nextWithdrawalStatus: BillingScheduleStatus? {
-        guard let normalizedWithdrawalDay else {
+        guard let withdrawalAnchorDate = withdrawalAnchorDate() else {
             return nil
         }
 
-        return BillingScheduleCalculator.monthlyStatus(day: normalizedWithdrawalDay)
+        return BillingScheduleCalculator.recurringStatus(
+            unit: .month,
+            interval: 1,
+            anchorDate: withdrawalAnchorDate
+        )
+    }
+}
+
+extension SubscriptionBillingFrequency {
+    func scheduleDescription(
+        anchorDate: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> String {
+        let anchorComponents = calendar.dateComponents([.year, .month, .day], from: anchorDate)
+        let year = anchorComponents.year ?? calendar.component(.year, from: anchorDate)
+        let month = anchorComponents.month ?? calendar.component(.month, from: anchorDate)
+        let day = anchorComponents.day ?? calendar.component(.day, from: anchorDate)
+        let weekdayText = anchorDate.formatted(.dateTime.weekday(.wide))
+        let fullDateText = anchorDate.formatted(.dateTime.year().month(.defaultDigits).day(.defaultDigits))
+
+        switch unit {
+        case .week:
+            if interval == 1 {
+                return "毎週\(weekdayText)"
+            }
+
+            return "\(interval)週間ごと \(weekdayText) \(fullDateText)起点"
+        case .month:
+            if interval == 1 {
+                return "毎月\(day)日"
+            }
+
+            return "\(interval)ヶ月ごと \(month)月\(day)日起点"
+        case .year:
+            if interval == 1 {
+                return "毎年\(month)月\(day)日"
+            }
+
+            return "\(interval)年ごと \(year)年\(month)月\(day)日起点"
+        }
     }
 }
 
 extension SubscriptionItem {
-    var normalizedBillingDay: Int? {
-        BillingScheduleCalculator.normalizedDay(billingDay)
+    var normalizedBillingInterval: Int {
+        max(billingInterval, 1)
     }
 
-    var normalizedBillingMonth: Int? {
-        BillingScheduleCalculator.normalizedMonth(billingMonth)
-    }
-
-    var billingScheduleText: String? {
-        switch billingCycle {
-        case .monthly:
-            guard let normalizedBillingDay else {
-                return nil
-            }
-
-            return "毎月\(normalizedBillingDay)日"
-        case .yearly:
-            guard let normalizedBillingMonth,
-                  let normalizedBillingDay else {
-                return nil
-            }
-
-            return "毎年\(normalizedBillingMonth)月\(normalizedBillingDay)日"
-        }
+    var billingScheduleText: String {
+        billingFrequency.scheduleDescription(anchorDate: billingAnchorDate)
     }
 
     var nextBillingStatus: BillingScheduleStatus? {
-        switch billingCycle {
-        case .monthly:
-            guard let normalizedBillingDay else {
-                return nil
-            }
-
-            return BillingScheduleCalculator.monthlyStatus(day: normalizedBillingDay)
-        case .yearly:
-            guard let normalizedBillingMonth,
-                  let normalizedBillingDay else {
-                return nil
-            }
-
-            return BillingScheduleCalculator.yearlyStatus(
-                month: normalizedBillingMonth,
-                day: normalizedBillingDay
-            )
-        }
+        BillingScheduleCalculator.recurringStatus(
+            unit: billingUnit,
+            interval: normalizedBillingInterval,
+            anchorDate: billingAnchorDate
+        )
     }
 }

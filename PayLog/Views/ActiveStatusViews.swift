@@ -93,30 +93,23 @@ struct ActiveStatusLabeledNavigationRow<Item: Activatable, Destination: View>: V
     }
 }
 
-struct ActiveStatusBadge: View {
-    private let indicator: ActiveStatusIndicator
-    private let statusText: String
+struct ActiveStatusLabeledContent<Item: Activatable>: View {
+    private let label: String
+    private let item: Item
 
-    init(_ item: some Activatable) {
-        self.indicator = ActiveStatusIndicator(item)
-        self.statusText = item.statusText
+    init(_ label: String = "状態", item: Item) {
+        self.label = label
+        self.item = item
     }
 
     var body: some View {
-        FloatingBadge {
+        LabeledContent(label) {
             HStack(spacing: 6) {
-                indicator
-
-                Text(statusText)
+                ActiveStatusIndicator(item)
+                Text(item.statusText)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
             }
-        }
-    }
-}
-
-extension View {
-    func activeStatusBadge(_ item: some Activatable) -> some View {
-        floatingBadge {
-            ActiveStatusBadge(item)
         }
     }
 }
@@ -137,8 +130,4 @@ private struct PreviewStatusItem: Activatable {
         trailingText: "¥1,490"
     )
     .padding()
-}
-#Preview("Status Badge", traits: .sizeThatFitsLayout) {
-    ActiveStatusBadge(PreviewStatusItem(isActive: true))
-        .padding()
 }

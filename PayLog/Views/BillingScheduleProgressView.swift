@@ -9,7 +9,9 @@ import SwiftUI
 
 struct BillingScheduleProgressView: View {
     let scheduleLabel: String
+    let countdownLabel: String
     let status: BillingScheduleStatus?
+    let isActive: Bool
 
     var body: some View {
         if let status {
@@ -17,7 +19,7 @@ struct BillingScheduleProgressView: View {
                 HStack {
                     HStack(spacing: 6) {
                         Image(systemName: "repeat")
-                        Text(status.nextDate.formatted(.dateTime.year().month(.defaultDigits).day(.defaultDigits)))
+                        Text(status.nextDate.formatted(.dateTime.year().month(.defaultDigits).day(.defaultDigits).weekday(.abbreviated)))
                     }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -25,18 +27,19 @@ struct BillingScheduleProgressView: View {
 
                     Spacer()
 
-                    Text("あと\(status.daysUntilNext)日")
+                    Text("\(countdownLabel)まであと\(status.daysUntilNext)日")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.secondary)
                 }
 
                 ProgressView(value: status.progress)
-                    .tint(.accentColor)
+                    .tint(isActive ? .accentColor : .secondary)
             }
             .padding(.vertical, 4)
         } else {
-            Text("\(scheduleLabel)は未設定です")
-                .foregroundStyle(.secondary)
+            LabeledContent(scheduleLabel) {
+                Text("未設定")
+            }
         }
     }
 }

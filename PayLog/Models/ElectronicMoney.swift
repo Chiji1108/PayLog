@@ -16,7 +16,13 @@ final class ElectronicMoney {
     var createdAt: Date = Date.now
     var card: Card?
 
-    init(name: String, notes: String? = nil, card: Card? = nil, isActive: Bool = true, createdAt: Date = .now) {
+    init(
+        name: String,
+        notes: String? = nil,
+        card: Card? = nil,
+        isActive: Bool = true,
+        createdAt: Date = Date.now
+    ) {
         self.name = name
         self.notes = notes
         self.card = card

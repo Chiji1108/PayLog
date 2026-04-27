@@ -10,97 +10,122 @@ import SwiftData
 
 enum SampleDataSeeder {
     static func seed(in context: ModelContext) {
+        let calendar = Calendar.autoupdatingCurrent
         let now = Date()
+
+        func anchoredDate(year: Int, month: Int, day: Int) -> Date {
+            let components = DateComponents(year: year, month: month, day: day)
+            return calendar.date(from: components) ?? now
+        }
+
+        func createdAt(minutesAgo: Int) -> Date {
+            calendar.date(byAdding: .minute, value: -minutesAgo, to: now) ?? now
+        }
+
+        let currentYear = calendar.component(.year, from: now)
         let mitsui = Bank(
             name: "三井住友銀行",
             branchName: "渋谷支店",
             accountNumber: "1234567",
             notes: "生活費",
-            createdAt: now.addingTimeInterval(-60 * 60 * 24 * 6)
+            createdAt: createdAt(minutesAgo: 120)
         )
         let mufg = Bank(
             name: "三菱UFJ銀行",
             branchName: "新宿支店",
             accountNumber: "7654321",
             isActive: false,
-            createdAt: now.addingTimeInterval(-60 * 60 * 24 * 5)
+            createdAt: createdAt(minutesAgo: 180)
         )
 
         let visa = Card(
             name: "Olive",
             lastFourDigits: "1234",
+            closingDay: 15,
             withdrawalDay: 26,
             notes: "メインカード",
             bank: mitsui,
-            createdAt: now.addingTimeInterval(-60 * 60 * 24 * 4)
+            createdAt: createdAt(minutesAgo: 100)
         )
         let master = Card(
             name: "MUFG Card",
             lastFourDigits: "9876",
+            closingDay: 31,
             withdrawalDay: 10,
             bank: mufg,
             isActive: false,
-            createdAt: now.addingTimeInterval(-60 * 60 * 24 * 3)
+            createdAt: createdAt(minutesAgo: 160)
         )
 
         let suica = ElectronicMoney(
             name: "Suica",
             notes: "通勤用",
             card: visa,
-            createdAt: now.addingTimeInterval(-60 * 60 * 24 * 2)
+            createdAt: createdAt(minutesAgo: 80)
         )
         let payPay = ElectronicMoney(
             name: "PayPay",
             card: master,
             isActive: false,
-            createdAt: now.addingTimeInterval(-60 * 60 * 24)
+            createdAt: createdAt(minutesAgo: 140)
         )
 
         let netflix = SubscriptionItem(
             name: "Netflix",
             amount: 1490,
-            billingDay: 18,
-            billingCycle: .monthly,
+            createdAt: createdAt(minutesAgo: 10),
+            billingUnit: .month,
+            billingAnchorDate: anchoredDate(year: currentYear, month: 3, day: 18),
+            paymentMethod: .card,
             notes: "家族共有",
-            card: visa,
-            createdAt: now.addingTimeInterval(-60 * 60 * 18)
+            card: visa
         )
         let spotify = SubscriptionItem(
             name: "Spotify",
-            amount: 9800,
-            billingDay: 29,
-            billingMonth: 2,
-            billingCycle: .yearly,
+            amount: 980,
+            createdAt: createdAt(minutesAgo: 220),
+            billingUnit: .month,
+            billingAnchorDate: anchoredDate(year: currentYear, month: 4, day: 5),
+            paymentMethod: .card,
             card: master,
-            isActive: false,
-            createdAt: now.addingTimeInterval(-60 * 60 * 12)
+            isActive: false
         )
         let youtubePremium = SubscriptionItem(
             name: "YouTube Premium",
             amount: 1280,
-            billingDay: 31,
-            billingCycle: .monthly,
+            createdAt: createdAt(minutesAgo: 260),
+            billingUnit: .month,
+            billingAnchorDate: anchoredDate(year: currentYear, month: 4, day: 12),
+            paymentMethod: .card,
             card: master,
-            isActive: false,
-            createdAt: now.addingTimeInterval(-60 * 60 * 6)
+            isActive: false
         )
-        let gymMembership = SubscriptionItem(
-            name: "ジム会費",
+        let petTrimming = SubscriptionItem(
+            name: "ペットのトリミング",
             amount: 7980,
-            billingDay: 27,
-            billingCycle: .monthly,
-            paymentMethod: .bankAccount,
-            bank: mitsui,
-            createdAt: now.addingTimeInterval(-60 * 60 * 3)
+            createdAt: createdAt(minutesAgo: 30),
+            billingInterval: 6,
+            billingUnit: .week,
+            billingAnchorDate: anchoredDate(year: currentYear, month: 4, day: 1),
+            paymentMethod: .onSite
+        )
+        let fixedAssetTax = SubscriptionItem(
+            name: "固定資産税",
+            amount: 44000,
+            createdAt: createdAt(minutesAgo: 40),
+            billingInterval: 3,
+            billingUnit: .month,
+            billingAnchorDate: anchoredDate(year: currentYear, month: 4, day: 30),
+            paymentMethod: .invoice
         )
         let adobeCreativeCloud = SubscriptionItem(
             name: "Adobe Creative Cloud",
             amount: 72800,
-            billingDay: 30,
-            billingMonth: 11,
-            billingCycle: .yearly,
-            card: visa,
-            createdAt: now
+            createdAt: createdAt(minutesAgo: 20),
+            billingUnit: .year,
+            billingAnchorDate: anchoredDate(year: currentYear, month: 11, day: 30),
+            paymentMethod: .card,
+            card: visa
         )
 
         context.insert(mitsui)
@@ -112,7 +137,8 @@ enum SampleDataSeeder {
         context.insert(netflix)
         context.insert(spotify)
         context.insert(youtubePremium)
-        context.insert(gymMembership)
+        context.insert(petTrimming)
+        context.insert(fixedAssetTax)
         context.insert(adobeCreativeCloud)
     }
 }

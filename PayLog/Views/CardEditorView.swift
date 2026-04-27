@@ -17,6 +17,7 @@ struct CardEditorView: View {
     private let onDelete: (() -> Void)?
     @State private var name = ""
     @State private var lastFourDigits = ""
+    @State private var closingDay: Int?
     @State private var withdrawalDay: Int?
     @State private var notes = ""
     @State private var isActive = true
@@ -28,6 +29,7 @@ struct CardEditorView: View {
         self.onDelete = onDelete
         _name = State(initialValue: card?.name ?? "")
         _lastFourDigits = State(initialValue: card?.lastFourDigits ?? "")
+        _closingDay = State(initialValue: card?.closingDay)
         _withdrawalDay = State(initialValue: card?.withdrawalDay)
         _notes = State(initialValue: card?.notes ?? "")
         _isActive = State(initialValue: card?.isActive ?? true)
@@ -59,6 +61,7 @@ struct CardEditorView: View {
 
                 if isActive {
                     Section {
+                        DayOfMonthPicker(title: "締日", selection: $closingDay)
                         DayOfMonthPicker(title: "引き落とし日", selection: $withdrawalDay)
                     } footer: {
                         Text("31日を指定した場合、30日までの月は月末扱いになります。")
@@ -96,6 +99,7 @@ struct CardEditorView: View {
                         if let card {
                             card.name = trimmedName
                             card.lastFourDigits = trimmedLastFourDigits
+                            card.closingDay = closingDay
                             card.withdrawalDay = withdrawalDay
                             card.notes = trimmedNotes
                             card.bank = selectedBank
@@ -104,6 +108,7 @@ struct CardEditorView: View {
                             let card = Card(
                                 name: trimmedName,
                                 lastFourDigits: trimmedLastFourDigits,
+                                closingDay: closingDay,
                                 withdrawalDay: withdrawalDay,
                                 notes: trimmedNotes,
                                 bank: selectedBank,

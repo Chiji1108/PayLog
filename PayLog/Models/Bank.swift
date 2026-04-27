@@ -25,7 +25,7 @@ final class Bank {
         accountNumber: String? = nil,
         notes: String? = nil,
         isActive: Bool = true,
-        createdAt: Date = .now
+        createdAt: Date = Date.now
     ) {
         self.name = name
         self.branchName = branchName

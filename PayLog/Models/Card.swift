@@ -12,6 +12,7 @@ import SwiftData
 final class Card {
     var name: String = ""
     var lastFourDigits: String?
+    var closingDay: Int?
     var withdrawalDay: Int?
     var notes: String?
     var isActive: Bool = true
@@ -23,14 +24,16 @@ final class Card {
     init(
         name: String,
         lastFourDigits: String? = nil,
+        closingDay: Int? = nil,
         withdrawalDay: Int? = nil,
         notes: String? = nil,
         bank: Bank? = nil,
         isActive: Bool = true,
-        createdAt: Date = .now
+        createdAt: Date = Date.now
     ) {
         self.name = name
         self.lastFourDigits = lastFourDigits
+        self.closingDay = closingDay
         self.withdrawalDay = withdrawalDay
         self.notes = notes
         self.bank = bank

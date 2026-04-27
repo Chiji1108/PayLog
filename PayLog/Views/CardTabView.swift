@@ -10,7 +10,7 @@ import SwiftData
 
 struct CardTabView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Card.name) private var cards: [Card]
+    @Query private var cards: [Card]
     @State private var showingAddSheet = false
 
     var body: some View {
@@ -29,16 +29,7 @@ struct CardTabView: View {
                             NavigationLink {
                                 CardDetailView(card: card)
                             } label: {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    ActiveStatusRow(card, title: card.name)
-
-                                    if card.isActive, let withdrawalStatus = card.nextWithdrawalStatus {
-                                        BillingScheduleProgressView(
-                                            scheduleLabel: "引き落とし日",
-                                            status: withdrawalStatus
-                                        )
-                                    }
-                                }
+                                CardRow(card: card)
                             }
                         }
                         .onDelete(perform: deleteCards)
@@ -47,7 +38,7 @@ struct CardTabView: View {
             }
             .navigationTitle("カード")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
                         showingAddSheet = true
                     } label: {
@@ -67,16 +58,31 @@ struct CardTabView: View {
         }
     }
 
-    private func deleteCard(_ card: Card) {
-        modelContext.delete(card)
-    }
-
     private var displayedCards: [Card] {
         cards.sortedForDisplay()
     }
 
     private func addSampleData() {
         SampleDataSeeder.seed(in: modelContext)
+    }
+}
+
+private struct CardRow: View {
+    let card: Card
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ActiveStatusRow(card, title: card.name)
+
+            if card.isActive, let withdrawalStatus = card.nextWithdrawalStatus {
+                BillingScheduleProgressView(
+                    scheduleLabel: "引き落とし日",
+                    countdownLabel: "引き落とし",
+                    status: withdrawalStatus,
+                    isActive: card.isActive
+                )
+            }
+        }
     }
 }
 

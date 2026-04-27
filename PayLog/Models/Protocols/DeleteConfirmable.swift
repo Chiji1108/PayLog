@@ -27,7 +27,7 @@ extension Bank: DeleteConfirmable {
 
 extension Card: DeleteConfirmable {
     static var deleteItemName: String { "カード" }
-    static var deleteConfirmationMessage: String? { "紐付いているサブスクや電子マネーのカード設定は未設定になります。" }
+    static var deleteConfirmationMessage: String? { "紐付いている固定費や電子マネーのカード設定は未設定になります。" }
 }
 
 extension ElectronicMoney: DeleteConfirmable {
@@ -36,6 +36,6 @@ extension ElectronicMoney: DeleteConfirmable {
 }
 
 extension SubscriptionItem: DeleteConfirmable {
-    static var deleteItemName: String { "サブスク" }
+    static var deleteItemName: String { "固定費" }
     static var deleteConfirmationMessage: String? { "この操作は元に戻せません。" }
 }

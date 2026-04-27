@@ -13,7 +13,7 @@ struct ContentView: View {
         TabView {
             SubscriptionTabView()
                 .tabItem {
-                    Label("サブスク", systemImage: "repeat.circle")
+                    Label("固定費", systemImage: "repeat.circle")
                 }
 
             CardTabView()

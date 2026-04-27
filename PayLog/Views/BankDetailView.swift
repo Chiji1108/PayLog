@@ -15,21 +15,32 @@ struct BankDetailView: View {
 
     var body: some View {
         List {
-            if bank.branchName != nil || bank.accountNumber != nil {
-                Section("銀行口座") {
-                    if let branchName = bank.branchName {
-                        LabeledContent("支店名", value: branchName)
-                    }
+            Section("銀行口座") {
+                ActiveStatusLabeledContent(item: bank)
 
-                    if let accountNumber = bank.accountNumber {
-                        LabeledContent("口座番号", value: accountNumber)
+                if let branchName = bank.branchName {
+                    LabeledContent("支店名", value: branchName)
+                } else {
+                    LabeledContent("支店名") {
+                        Text("未設定")
+                    }
+                }
+
+                if let accountNumber = bank.accountNumber {
+                    LabeledContent("口座番号", value: accountNumber)
+                } else {
+                    LabeledContent("口座番号") {
+                        Text("未設定")
                     }
                 }
             }
 
-            if let notes = bank.trimmedNotes {
-                Section("メモ") {
+            Section("メモ") {
+                if let notes = bank.trimmedNotes {
                     Text(notes)
+                } else {
+                    Text("未設定")
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -48,9 +59,9 @@ struct BankDetailView: View {
                 }
             }
 
-            Section("口座振替のサブスク") {
+            Section("口座振替の固定費") {
                 if sortedSubscriptions.isEmpty {
-                    Text("まだサブスクはありません")
+                    Text("まだ固定費はありません")
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(sortedSubscriptions) { subscription in
@@ -70,7 +81,6 @@ struct BankDetailView: View {
             }
         }
         .navigationTitle(bank.name)
-        .activeStatusBadge(bank)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("編集") {

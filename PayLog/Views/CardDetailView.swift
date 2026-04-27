@@ -16,9 +16,28 @@ struct CardDetailView: View {
     var body: some View {
         List {
             Section("カード") {
+                ActiveStatusLabeledContent(item: card)
+
                 if let lastFourDigits = card.lastFourDigits {
                     LabeledContent("末尾4桁", value: lastFourDigits)
+                } else {
+                    LabeledContent("末尾4桁") {
+                        Text("未設定")
+                    }
                 }
+                BillingScheduleProgressView(
+                    scheduleLabel: "締日",
+                    countdownLabel: "締日",
+                    status: card.nextClosingStatus,
+                    isActive: card.isActive
+                )
+
+                BillingScheduleProgressView(
+                    scheduleLabel: "引き落とし日",
+                    countdownLabel: "引き落とし",
+                    status: card.nextWithdrawalStatus,
+                    isActive: card.isActive
+                )
 
                 if let bank = card.bank {
                     ActiveStatusLabeledNavigationRow(
@@ -29,25 +48,24 @@ struct CardDetailView: View {
                         BankDetailView(bank: bank)
                     }
                 } else {
-                    LabeledContent("引き落とし口座", value: "未設定")
+                    LabeledContent("引き落とし口座") {
+                        Text("未設定")
+                    }
+                }
+            }
+
+            Section("メモ") {
+                if let notes = card.trimmedNotes {
+                    Text(notes)
+                } else {
+                    Text("未設定")
                         .foregroundStyle(.secondary)
                 }
-
-                BillingScheduleProgressView(
-                    scheduleLabel: "引き落とし日",
-                    status: card.nextWithdrawalStatus
-                )
             }
 
-            if let notes = card.trimmedNotes {
-                Section("メモ") {
-                    Text(notes)
-                }
-            }
-
-            Section("このカードで支払うサブスク") {
+            Section("このカードで支払う固定費") {
                 if sortedSubscriptions.isEmpty {
-                    Text("まだサブスクはありません")
+                    Text("まだ固定費はありません")
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(sortedSubscriptions) { subscription in
@@ -80,7 +98,6 @@ struct CardDetailView: View {
             }
         }
         .navigationTitle(card.name)
-        .activeStatusBadge(card)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("編集") {
