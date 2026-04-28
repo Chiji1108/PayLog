@@ -118,11 +118,12 @@ enum SampleDataSeeder {
             billingAnchorDate: anchoredDate(year: currentYear, month: 4, day: 30),
             paymentMethod: .invoice
         )
-        let adobeCreativeCloud = SubscriptionItem(
-            name: "Adobe Creative Cloud",
-            amount: 72800,
-            createdAt: createdAt(minutesAgo: 20),
-            billingUnit: .year,
+        let chatGPTPlus = SubscriptionItem(
+            name: "ChatGPT Plus",
+            amount: 20.00,
+            createdAt: createdAt(minutesAgo: 15),
+            billingUnit: .month,
+            currency: .usd,
             billingAnchorDate: anchoredDate(year: currentYear, month: 11, day: 30),
             paymentMethod: .card,
             card: visa
@@ -130,7 +131,7 @@ enum SampleDataSeeder {
         let oliveAnnualFee = SubscriptionItem(
             name: "Olive 年会費",
             amount: 5500,
-            createdAt: createdAt(minutesAgo: 15),
+            createdAt: createdAt(minutesAgo: 20),
             billingUnit: .year,
             billingAnchorDate: anchoredDate(year: currentYear, month: 5, day: 1),
             paymentMethod: .card,
@@ -161,7 +162,7 @@ enum SampleDataSeeder {
         context.insert(youtubePremium)
         context.insert(petTrimming)
         context.insert(fixedAssetTax)
-        context.insert(adobeCreativeCloud)
+        context.insert(chatGPTPlus)
         context.insert(oliveAnnualFee)
         context.insert(mufgAnnualFee)
     }

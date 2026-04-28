@@ -17,9 +17,10 @@ struct SubscriptionEditorView: View {
     private let subscription: SubscriptionItem?
     private let onDelete: (() -> Void)?
     @State private var name = ""
-    @State private var amount: Int?
+    @State private var amountText = ""
     @State private var billingInterval = 1
     @State private var billingUnit: SubscriptionBillingUnit = .month
+    @State private var currency: SubscriptionCurrency = .jpy
     @State private var billingAnchorDate = Calendar.autoupdatingCurrent.startOfDay(for: Date.now)
     @State private var paymentMethod: SubscriptionPaymentMethod = .unspecified
     @State private var notes = ""
@@ -32,9 +33,15 @@ struct SubscriptionEditorView: View {
         self.subscription = subscription
         self.onDelete = onDelete
         _name = State(initialValue: subscription?.name ?? "")
-        _amount = State(initialValue: subscription?.amount)
+        _amountText = State(
+            initialValue: Self.editingAmountText(
+                for: subscription?.amount,
+                currency: subscription?.currency ?? .jpy
+            )
+        )
         _billingInterval = State(initialValue: max(subscription?.billingInterval ?? 1, 1))
         _billingUnit = State(initialValue: subscription?.billingUnit ?? .month)
+        _currency = State(initialValue: subscription?.currency ?? .jpy)
         _billingAnchorDate = State(
             initialValue: Calendar.autoupdatingCurrent.startOfDay(for: subscription?.billingAnchorDate ?? .now)
         )
@@ -57,8 +64,21 @@ struct SubscriptionEditorView: View {
                 }
 
                 Section {
-                    TextField("金額", value: $amount, format: .number)
-                        .keyboardType(.numberPad)
+                    HStack(spacing: 12) {
+                        TextField("金額", text: $amountText)
+                            .keyboardType(currency.fractionDigits == 0 ? .numberPad : .decimalPad)
+
+                        Text(currency.editorUnitLabel)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+
+                    Picker("通貨", selection: $currency) {
+                        ForEach(SubscriptionCurrency.allCases) { currency in
+                            Text(currency.pickerLabel).tag(currency)
+                        }
+                    }
 
                     Stepper(value: $billingInterval, in: 1...24) {
                         LabeledContent("間隔", value: billingFrequency.intervalDescription)
@@ -135,6 +155,14 @@ struct SubscriptionEditorView: View {
                 }
             }
             .navigationTitle(subscription == nil ? "固定費を追加" : "固定費を編集")
+            .onChange(of: currency) { oldValue, newValue in
+                guard oldValue != newValue,
+                      let amount = Self.decimalValue(from: trimmedAmountText, currency: oldValue) else {
+                    return
+                }
+
+                amountText = Self.editingAmountText(for: amount, currency: newValue)
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("キャンセル") {
@@ -144,7 +172,7 @@ struct SubscriptionEditorView: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
-                        guard let amount, amount > 0 else {
+                        guard let amount = parsedAmount, amount > 0 else {
                             return
                         }
 
@@ -156,6 +184,7 @@ struct SubscriptionEditorView: View {
                             subscription.amount = amount
                             subscription.billingInterval = billingInterval
                             subscription.billingUnit = billingUnit
+                            subscription.currency = currency
                             subscription.billingAnchorDate = normalizedAnchorDate
                             subscription.paymentMethod = paymentMethod
                             subscription.notes = trimmedNotes
@@ -168,6 +197,7 @@ struct SubscriptionEditorView: View {
                                 amount: amount,
                                 billingInterval: billingInterval,
                                 billingUnit: billingUnit,
+                                currency: currency,
                                 billingAnchorDate: normalizedAnchorDate,
                                 paymentMethod: paymentMethod,
                                 notes: trimmedNotes,
@@ -187,6 +217,10 @@ struct SubscriptionEditorView: View {
 
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedAmountText: String {
+        amountText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var trimmedNotes: String? {
@@ -218,8 +252,12 @@ struct SubscriptionEditorView: View {
         Calendar.autoupdatingCurrent.startOfDay(for: billingAnchorDate)
     }
 
+    private var parsedAmount: Decimal? {
+        Self.decimalValue(from: trimmedAmountText, currency: currency)
+    }
+
     private var hasValidAmount: Bool {
-        guard let amount else {
+        guard let amount = parsedAmount else {
             return false
         }
 
@@ -241,6 +279,49 @@ struct SubscriptionEditorView: View {
         modelContext.delete(subscription)
         onDelete?()
         dismiss()
+    }
+
+    private static func editingAmountText(
+        for amount: Decimal?,
+        currency: SubscriptionCurrency
+    ) -> String {
+        guard let amount else {
+            return ""
+        }
+
+        let roundedAmount = roundedAmount(amount, currency: currency)
+        let formatter = amountFormatter(for: currency)
+        return formatter.string(from: roundedAmount as NSDecimalNumber) ?? ""
+    }
+
+    private static func decimalValue(from text: String, currency: SubscriptionCurrency) -> Decimal? {
+        guard !text.isEmpty else {
+            return nil
+        }
+
+        let formatter = amountFormatter(for: currency)
+        guard let number = formatter.number(from: text) else {
+            return nil
+        }
+
+        return roundedAmount(number.decimalValue, currency: currency)
+    }
+
+    private static func amountFormatter(for currency: SubscriptionCurrency) -> NumberFormatter {
+        let formatter = NumberFormatter()
+        formatter.locale = .autoupdatingCurrent
+        formatter.numberStyle = .decimal
+        formatter.generatesDecimalNumbers = true
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = currency.fractionDigits
+        return formatter
+    }
+
+    private static func roundedAmount(_ amount: Decimal, currency: SubscriptionCurrency) -> Decimal {
+        var value = amount
+        var rounded = Decimal()
+        NSDecimalRound(&rounded, &value, currency.fractionDigits, .plain)
+        return rounded
     }
 }
 

@@ -60,6 +60,84 @@ enum SubscriptionBillingUnit: String, CaseIterable, Codable, Identifiable {
     }
 }
 
+enum SubscriptionCurrency: String, CaseIterable, Codable, Identifiable {
+    case jpy = "JPY"
+    case usd = "USD"
+    case eur = "EUR"
+    case gbp = "GBP"
+    case aud = "AUD"
+    case cad = "CAD"
+    case cny = "CNY"
+    case hkd = "HKD"
+    case krw = "KRW"
+
+    var id: Self { self }
+
+    var code: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .jpy:
+            "日本円"
+        case .usd:
+            "米ドル"
+        case .eur:
+            "ユーロ"
+        case .gbp:
+            "英ポンド"
+        case .aud:
+            "豪ドル"
+        case .cad:
+            "カナダドル"
+        case .cny:
+            "人民元"
+        case .hkd:
+            "香港ドル"
+        case .krw:
+            "韓国ウォン"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .jpy, .cny:
+            "¥"
+        case .usd, .cad, .aud, .hkd:
+            "$"
+        case .eur:
+            "€"
+        case .gbp:
+            "£"
+        case .krw:
+            "₩"
+        }
+    }
+
+    var fractionDigits: Int {
+        switch self {
+        case .jpy, .krw:
+            0
+        case .usd, .eur, .gbp, .aud, .cad, .cny, .hkd:
+            2
+        }
+    }
+
+    var pickerLabel: String {
+        "\(label) (\(symbol) \(code))"
+    }
+
+    var editorUnitLabel: String {
+        "\(symbol) \(code)"
+    }
+
+    func formattedAmount(_ amount: Decimal) -> String {
+        amount.formatted(
+            .currency(code: code)
+                .precision(.fractionLength(fractionDigits))
+        )
+    }
+}
+
 struct SubscriptionBillingFrequency: Hashable, Identifiable, Comparable {
     let interval: Int
     let unit: SubscriptionBillingUnit
@@ -81,8 +159,8 @@ struct SubscriptionBillingFrequency: Hashable, Identifiable, Comparable {
         "\(interval)\(unit.durationLabel)"
     }
 
-    func formattedAmount(_ amount: Int) -> String {
-        let amountText = amount.formatted(.currency(code: "JPY").precision(.fractionLength(0)))
+    func formattedAmount(_ amount: Decimal, currency: SubscriptionCurrency) -> String {
+        let amountText = currency.formattedAmount(amount)
         let suffix = interval == 1 ? unit.amountSuffix : "\(interval)\(unit.durationLabel)"
         return "\(amountText) / \(suffix)"
     }
@@ -133,11 +211,12 @@ enum SubscriptionPaymentMethod: String, CaseIterable, Codable, Identifiable {
 @Model
 final class SubscriptionItem {
     var name: String = ""
-    var amount: Int = 0
+    var amount: Decimal = 0
     var createdAt: Date = Date.now
     var billingInterval: Int = 1
     var billingAnchorDate: Date = Date.now
     private var billingUnitRawValue: String = SubscriptionBillingUnit.month.rawValue
+    private var currencyCodeRawValue: String = SubscriptionCurrency.jpy.rawValue
     private var paymentMethodRawValue: String?
     var notes: String?
     var isActive: Bool = true
@@ -152,6 +231,11 @@ final class SubscriptionItem {
 
     var billingFrequency: SubscriptionBillingFrequency {
         SubscriptionBillingFrequency(interval: billingInterval, unit: billingUnit)
+    }
+
+    var currency: SubscriptionCurrency {
+        get { SubscriptionCurrency(rawValue: currencyCodeRawValue) ?? .jpy }
+        set { currencyCodeRawValue = newValue.rawValue }
     }
 
     var paymentMethod: SubscriptionPaymentMethod {
@@ -175,7 +259,11 @@ final class SubscriptionItem {
     }
 
     var amountWithBillingCycleText: String {
-        billingFrequency.formattedAmount(amount)
+        billingFrequency.formattedAmount(amount, currency: currency)
+    }
+
+    var formattedAmountText: String {
+        currency.formattedAmount(amount)
     }
 
     var billingCountdownLabel: String {
@@ -184,10 +272,11 @@ final class SubscriptionItem {
 
     init(
         name: String,
-        amount: Int,
+        amount: Decimal,
         createdAt: Date = Date.now,
         billingInterval: Int = 1,
         billingUnit: SubscriptionBillingUnit = .month,
+        currency: SubscriptionCurrency = .jpy,
         billingAnchorDate: Date = .now,
         paymentMethod: SubscriptionPaymentMethod = .unspecified,
         notes: String? = nil,
@@ -201,6 +290,7 @@ final class SubscriptionItem {
         self.billingInterval = max(billingInterval, 1)
         self.billingAnchorDate = Calendar.autoupdatingCurrent.startOfDay(for: billingAnchorDate)
         self.billingUnitRawValue = billingUnit.rawValue
+        self.currencyCodeRawValue = currency.rawValue
         self.paymentMethodRawValue = paymentMethod.rawValue
         self.notes = notes
         self.card = paymentMethod == .card ? card : nil
