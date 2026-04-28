@@ -61,7 +61,7 @@ enum SampleDataSeeder {
             name: "楽天カード",
             lastFourDigits: "4455",
             withdrawalDay: 27,
-            notes: "ネット通販用",
+            notes: "あとで口座設定する",
             annualFeeSetting: .free,
             createdAt: createdAt(minutesAgo: 110)
         )
