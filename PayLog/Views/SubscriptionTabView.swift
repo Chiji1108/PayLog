@@ -65,6 +65,12 @@ struct SubscriptionTabView: View {
                 }
 
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    NavigationLink {
+                        SubscriptionInsightsView()
+                    } label: {
+                        Label("分析を見る", systemImage: "chart.bar.xaxis")
+                    }
+
                     Button {
                         showingAddSheet = true
                     } label: {
