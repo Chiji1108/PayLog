@@ -12,6 +12,7 @@ struct CardDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var card: Card
     @State private var showingEditSheet = false
+    @State private var selectedCalendarDraft: CalendarEventDraft?
 
     var body: some View {
         List {
@@ -113,6 +114,31 @@ struct CardDetailView: View {
         }
         .navigationTitle(card.name)
         .toolbar {
+            if closingEventDraft != nil || withdrawalEventDraft != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        if let closingEventDraft {
+                            Button {
+                                selectedCalendarDraft = closingEventDraft
+                            } label: {
+                                Label("締日を追加", systemImage: "calendar.badge.plus")
+                            }
+                        }
+
+                        if let withdrawalEventDraft {
+                            Button {
+                                selectedCalendarDraft = withdrawalEventDraft
+                            } label: {
+                                Label("引き落とし日を追加", systemImage: "calendar.badge.plus")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "calendar.badge.plus")
+                    }
+                    .accessibilityLabel("カレンダーに追加")
+                }
+            }
+
             ToolbarItem(placement: .topBarTrailing) {
                 Button("編集") {
                     showingEditSheet = true
@@ -124,6 +150,9 @@ struct CardDetailView: View {
                 dismiss()
             }
         }
+        .sheet(item: $selectedCalendarDraft) { draft in
+            CalendarEventEditorSheet(draft: draft)
+        }
     }
 
     private var sortedSubscriptions: [SubscriptionItem] {
@@ -132,6 +161,44 @@ struct CardDetailView: View {
 
     private var sortedElectronicMoneys: [ElectronicMoney] {
         (card.electronicMoneys ?? []).sortedForDisplay()
+    }
+
+    private var closingEventDraft: CalendarEventDraft? {
+        makeEventDraft(
+            title: "\(card.name) 締日",
+            status: card.nextClosingStatus,
+            recurrence: card.normalizedClosingDay.map { .monthly(interval: 1, dayOfMonth: $0) }
+        )
+    }
+
+    private var withdrawalEventDraft: CalendarEventDraft? {
+        makeEventDraft(
+            title: "\(card.name) 引き落とし日",
+            status: card.nextWithdrawalStatus,
+            recurrence: card.normalizedWithdrawalDay.map { .monthly(interval: 1, dayOfMonth: $0) }
+        )
+    }
+
+    private func makeEventDraft(
+        title: String,
+        status: BillingScheduleStatus?,
+        recurrence: CalendarEventRecurrence?
+    ) -> CalendarEventDraft? {
+        guard let status else {
+            return nil
+        }
+
+        let startDate = status.nextDate
+        let endDate = Calendar.autoupdatingCurrent.date(byAdding: .day, value: 1, to: startDate) ?? startDate
+
+        return CalendarEventDraft(
+            title: title,
+            startDate: startDate,
+            endDate: endDate,
+            isAllDay: true,
+            notes: card.trimmedNotes,
+            recurrence: recurrence
+        )
     }
 }
 

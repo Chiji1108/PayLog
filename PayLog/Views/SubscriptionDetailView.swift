@@ -73,6 +73,18 @@ struct SubscriptionDetailView: View {
         }
         .navigationTitle(subscription.name)
         .toolbar {
+            if let billingEventDraft {
+                ToolbarItem(placement: .topBarTrailing) {
+                    CalendarEventAddButton(
+                        title: "\(subscription.billingCountdownLabel)日をカレンダーに追加",
+                        draft: billingEventDraft
+                    ) {
+                        Image(systemName: "calendar.badge.plus")
+                    }
+                    .accessibilityLabel("\(subscription.billingCountdownLabel)日をカレンダーに追加")
+                }
+            }
+
             ToolbarItem(placement: .topBarTrailing) {
                 Button("編集") {
                     showingEditSheet = true
@@ -84,6 +96,27 @@ struct SubscriptionDetailView: View {
                 dismiss()
             }
         }
+    }
+
+    private var billingEventDraft: CalendarEventDraft? {
+        guard let status = subscription.nextBillingStatus else {
+            return nil
+        }
+
+        let startDate = status.nextDate
+        let endDate = Calendar.autoupdatingCurrent.date(byAdding: .day, value: 1, to: startDate) ?? startDate
+        let notes = [subscription.amountWithBillingCycleText, subscription.trimmedNotes]
+            .compactMap { $0 }
+            .joined(separator: "\n")
+
+        return CalendarEventDraft(
+            title: "\(subscription.name) \(subscription.billingCountdownLabel)日",
+            startDate: startDate,
+            endDate: endDate,
+            isAllDay: true,
+            notes: notes.isEmpty ? nil : notes,
+            recurrence: subscription.calendarEventRecurrence
+        )
     }
 }
 

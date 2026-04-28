@@ -57,6 +57,15 @@ enum SampleDataSeeder {
             isActive: false,
             createdAt: createdAt(minutesAgo: 160)
         )
+        let rakuten = Card(
+            name: "楽天カード",
+            lastFourDigits: "4455",
+            closingDay: 31,
+            withdrawalDay: 27,
+            notes: "ネット通販用",
+            annualFeeSetting: .free,
+            createdAt: createdAt(minutesAgo: 110)
+        )
 
         let suica = ElectronicMoney(
             name: "Suica",
@@ -157,6 +166,7 @@ enum SampleDataSeeder {
         context.insert(mufg)
         context.insert(visa)
         context.insert(master)
+        context.insert(rakuten)
         context.insert(suica)
         context.insert(payPay)
         context.insert(netflix)

@@ -35,14 +35,35 @@ struct SubscriptionTabView: View {
                                 )
                             }
                         } else {
-                            ForEach(filteredSubscriptions) { subscription in
-                                NavigationLink {
-                                    SubscriptionDetailView(subscription: subscription)
-                                } label: {
-                                    SubscriptionRow(subscription: subscription)
+                            if !activeSubscriptions.isEmpty {
+                                Section {
+                                    ForEach(activeSubscriptions) { subscription in
+                                        NavigationLink {
+                                            SubscriptionDetailView(subscription: subscription)
+                                        } label: {
+                                            SubscriptionRow(subscription: subscription)
+                                        }
+                                    }
+                                    .onDelete(perform: deleteActiveSubscriptions)
+                                } header: {
+                                    ActiveStatusSectionHeader(isActive: true)
                                 }
                             }
-                            .onDelete(perform: deleteSubscriptions)
+
+                            if !inactiveSubscriptions.isEmpty {
+                                Section {
+                                    ForEach(inactiveSubscriptions) { subscription in
+                                        NavigationLink {
+                                            SubscriptionDetailView(subscription: subscription)
+                                        } label: {
+                                            SubscriptionRow(subscription: subscription)
+                                        }
+                                    }
+                                    .onDelete(perform: deleteInactiveSubscriptions)
+                                } header: {
+                                    ActiveStatusSectionHeader(isActive: false)
+                                }
+                            }
                         }
                     }
                 }
@@ -89,9 +110,15 @@ struct SubscriptionTabView: View {
         }
     }
 
-    private func deleteSubscriptions(offsets: IndexSet) {
+    private func deleteActiveSubscriptions(offsets: IndexSet) {
         for index in offsets {
-            modelContext.delete(filteredSubscriptions[index])
+            modelContext.delete(activeSubscriptions[index])
+        }
+    }
+
+    private func deleteInactiveSubscriptions(offsets: IndexSet) {
+        for index in offsets {
+            modelContext.delete(inactiveSubscriptions[index])
         }
     }
 
@@ -108,6 +135,14 @@ struct SubscriptionTabView: View {
 
     private var availableFrequencies: [SubscriptionBillingFrequency] {
         Array(Set(subscriptions.map(\.billingFrequency))).sorted()
+    }
+
+    private var activeSubscriptions: [SubscriptionItem] {
+        filteredSubscriptions.filter(\.isActive)
+    }
+
+    private var inactiveSubscriptions: [SubscriptionItem] {
+        filteredSubscriptions.filter { !$0.isActive }
     }
 
     private func addSampleData() {
@@ -164,7 +199,8 @@ private struct SubscriptionRow: View {
             ActiveStatusRow(
                 subscription,
                 title: subscription.name,
-                trailingText: subscription.amountWithBillingCycleText
+                trailingText: subscription.amountWithBillingCycleText,
+                showIndicator: false
             )
 
             if subscription.isActive, let billingStatus = subscription.nextBillingStatus {

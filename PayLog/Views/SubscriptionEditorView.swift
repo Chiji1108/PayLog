@@ -207,6 +207,7 @@ struct SubscriptionEditorView: View {
                             )
                             modelContext.insert(subscription)
                         }
+                        try? modelContext.save()
                         dismiss()
                     }
                     .disabled(trimmedName.isEmpty || !hasValidAmount)
@@ -277,6 +278,7 @@ struct SubscriptionEditorView: View {
 
     private func deleteSubscription(_ subscription: SubscriptionItem) {
         modelContext.delete(subscription)
+        try? modelContext.save()
         onDelete?()
         dismiss()
     }

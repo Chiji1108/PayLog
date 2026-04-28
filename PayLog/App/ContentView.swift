@@ -9,6 +9,9 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some View {
         TabView {
             SubscriptionTabView()
@@ -30,6 +33,18 @@ struct ContentView: View {
                 .tabItem {
                     Label("銀行口座", systemImage: "building.columns")
                 }
+        }
+        .task {
+            await NotificationScheduler.shared.rescheduleAll(using: modelContext)
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else {
+                return
+            }
+
+            Task {
+                await NotificationScheduler.shared.rescheduleAll(using: modelContext)
+            }
         }
     }
 }

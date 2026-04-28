@@ -25,14 +25,35 @@ struct ElectronicMoneyTabView: View {
                     )
                 } else {
                     List {
-                        ForEach(displayedElectronicMoneys) { electronicMoney in
-                            NavigationLink {
-                                ElectronicMoneyDetailView(electronicMoney: electronicMoney)
-                            } label: {
-                                ElectronicMoneyRow(electronicMoney: electronicMoney)
+                        if !activeElectronicMoneys.isEmpty {
+                            Section {
+                                ForEach(activeElectronicMoneys) { electronicMoney in
+                                    NavigationLink {
+                                        ElectronicMoneyDetailView(electronicMoney: electronicMoney)
+                                    } label: {
+                                        ElectronicMoneyRow(electronicMoney: electronicMoney)
+                                    }
+                                }
+                                .onDelete(perform: deleteActiveElectronicMoneys)
+                            } header: {
+                                ActiveStatusSectionHeader(isActive: true)
                             }
                         }
-                        .onDelete(perform: deleteElectronicMoneys)
+
+                        if !inactiveElectronicMoneys.isEmpty {
+                            Section {
+                                ForEach(inactiveElectronicMoneys) { electronicMoney in
+                                    NavigationLink {
+                                        ElectronicMoneyDetailView(electronicMoney: electronicMoney)
+                                    } label: {
+                                        ElectronicMoneyRow(electronicMoney: electronicMoney)
+                                    }
+                                }
+                                .onDelete(perform: deleteInactiveElectronicMoneys)
+                            } header: {
+                                ActiveStatusSectionHeader(isActive: false)
+                            }
+                        }
                     }
                 }
             }
@@ -52,14 +73,28 @@ struct ElectronicMoneyTabView: View {
         }
     }
 
-    private func deleteElectronicMoneys(offsets: IndexSet) {
+    private func deleteActiveElectronicMoneys(offsets: IndexSet) {
         for index in offsets {
-            modelContext.delete(displayedElectronicMoneys[index])
+            modelContext.delete(activeElectronicMoneys[index])
+        }
+    }
+
+    private func deleteInactiveElectronicMoneys(offsets: IndexSet) {
+        for index in offsets {
+            modelContext.delete(inactiveElectronicMoneys[index])
         }
     }
 
     private var displayedElectronicMoneys: [ElectronicMoney] {
         electronicMoneys.sortedForDisplay()
+    }
+
+    private var activeElectronicMoneys: [ElectronicMoney] {
+        displayedElectronicMoneys.filter(\.isActive)
+    }
+
+    private var inactiveElectronicMoneys: [ElectronicMoney] {
+        displayedElectronicMoneys.filter { !$0.isActive }
     }
 
     private func addSampleData() {
@@ -71,7 +106,7 @@ private struct ElectronicMoneyRow: View {
     let electronicMoney: ElectronicMoney
 
     var body: some View {
-        ActiveStatusRow(electronicMoney, title: electronicMoney.name)
+        ActiveStatusRow(electronicMoney, title: electronicMoney.name, showIndicator: false)
     }
 }
 

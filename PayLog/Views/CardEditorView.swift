@@ -151,6 +151,10 @@ struct CardEditorView: View {
                             )
                             modelContext.insert(card)
                         }
+                        try? modelContext.save()
+                        Task {
+                            await NotificationScheduler.shared.rescheduleAll(using: modelContext)
+                        }
                         dismiss()
                     }
                     .disabled(trimmedName.isEmpty)
@@ -222,6 +226,10 @@ struct CardEditorView: View {
 
     private func deleteCard(_ card: Card) {
         modelContext.delete(card)
+        try? modelContext.save()
+        Task {
+            await NotificationScheduler.shared.rescheduleAll(using: modelContext)
+        }
         onDelete?()
         dismiss()
     }

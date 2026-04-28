@@ -25,14 +25,35 @@ struct BankTabView: View {
                     )
                 } else {
                     List {
-                        ForEach(displayedBanks) { bank in
-                            NavigationLink {
-                                BankDetailView(bank: bank)
-                            } label: {
-                                BankRow(bank: bank)
+                        if !activeBanks.isEmpty {
+                            Section {
+                                ForEach(activeBanks) { bank in
+                                    NavigationLink {
+                                        BankDetailView(bank: bank)
+                                    } label: {
+                                        BankRow(bank: bank)
+                                    }
+                                }
+                                .onDelete(perform: deleteActiveBanks)
+                            } header: {
+                                ActiveStatusSectionHeader(isActive: true)
                             }
                         }
-                        .onDelete(perform: deleteBanks)
+
+                        if !inactiveBanks.isEmpty {
+                            Section {
+                                ForEach(inactiveBanks) { bank in
+                                    NavigationLink {
+                                        BankDetailView(bank: bank)
+                                    } label: {
+                                        BankRow(bank: bank)
+                                    }
+                                }
+                                .onDelete(perform: deleteInactiveBanks)
+                            } header: {
+                                ActiveStatusSectionHeader(isActive: false)
+                            }
+                        }
                     }
                 }
             }
@@ -52,14 +73,28 @@ struct BankTabView: View {
         }
     }
 
-    private func deleteBanks(offsets: IndexSet) {
+    private func deleteActiveBanks(offsets: IndexSet) {
         for index in offsets {
-            modelContext.delete(displayedBanks[index])
+            modelContext.delete(activeBanks[index])
+        }
+    }
+
+    private func deleteInactiveBanks(offsets: IndexSet) {
+        for index in offsets {
+            modelContext.delete(inactiveBanks[index])
         }
     }
 
     private var displayedBanks: [Bank] {
         banks.sortedForDisplay()
+    }
+
+    private var activeBanks: [Bank] {
+        displayedBanks.filter(\.isActive)
+    }
+
+    private var inactiveBanks: [Bank] {
+        displayedBanks.filter { !$0.isActive }
     }
 
     private func addSampleData() {
@@ -71,7 +106,7 @@ private struct BankRow: View {
     let bank: Bank
 
     var body: some View {
-        ActiveStatusRow(bank, title: bank.name)
+        ActiveStatusRow(bank, title: bank.name, showIndicator: false)
     }
 }
 

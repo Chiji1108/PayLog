@@ -388,26 +388,44 @@ extension Card {
     }
 
     var nextClosingStatus: BillingScheduleStatus? {
-        guard let closingAnchorDate = closingAnchorDate() else {
+        closingStatus()
+    }
+
+    func closingStatus(
+        referenceDate: Date = .now,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> BillingScheduleStatus? {
+        guard let closingAnchorDate = closingAnchorDate(referenceDate: referenceDate, calendar: calendar) else {
             return nil
         }
 
         return BillingScheduleCalculator.recurringStatus(
             unit: .month,
             interval: 1,
-            anchorDate: closingAnchorDate
+            anchorDate: closingAnchorDate,
+            referenceDate: referenceDate,
+            calendar: calendar
         )
     }
 
     var nextWithdrawalStatus: BillingScheduleStatus? {
-        guard let withdrawalAnchorDate = withdrawalAnchorDate() else {
+        withdrawalStatus()
+    }
+
+    func withdrawalStatus(
+        referenceDate: Date = .now,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> BillingScheduleStatus? {
+        guard let withdrawalAnchorDate = withdrawalAnchorDate(referenceDate: referenceDate, calendar: calendar) else {
             return nil
         }
 
         return BillingScheduleCalculator.recurringStatus(
             unit: .month,
             interval: 1,
-            anchorDate: withdrawalAnchorDate
+            anchorDate: withdrawalAnchorDate,
+            referenceDate: referenceDate,
+            calendar: calendar
         )
     }
 }
@@ -448,6 +466,30 @@ extension SubscriptionBillingFrequency {
 }
 
 extension SubscriptionItem {
+    var calendarEventRecurrence: CalendarEventRecurrence? {
+        let interval = normalizedBillingInterval
+        let calendar = Calendar.autoupdatingCurrent
+        let components = calendar.dateComponents([.month, .day], from: billingAnchorDate)
+
+        switch billingUnit {
+        case .week:
+            return .weekly(interval: interval)
+        case .month:
+            guard let day = components.day else {
+                return nil
+            }
+
+            return .monthly(interval: interval, dayOfMonth: day)
+        case .year:
+            guard let month = components.month,
+                  let day = components.day else {
+                return nil
+            }
+
+            return .yearly(interval: interval, month: month, dayOfMonth: day)
+        }
+    }
+
     var normalizedBillingInterval: Int {
         max(billingInterval, 1)
     }
@@ -457,10 +499,19 @@ extension SubscriptionItem {
     }
 
     var nextBillingStatus: BillingScheduleStatus? {
+        billingStatus()
+    }
+
+    func billingStatus(
+        referenceDate: Date = .now,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> BillingScheduleStatus? {
         BillingScheduleCalculator.recurringStatus(
             unit: billingUnit,
             interval: normalizedBillingInterval,
-            anchorDate: billingAnchorDate
+            anchorDate: billingAnchorDate,
+            referenceDate: referenceDate,
+            calendar: calendar
         )
     }
 }

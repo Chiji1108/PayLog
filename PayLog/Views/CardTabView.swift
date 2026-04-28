@@ -25,20 +25,47 @@ struct CardTabView: View {
                     )
                 } else {
                     List {
-                        ForEach(displayedCards) { card in
-                            NavigationLink {
-                                CardDetailView(card: card)
-                            } label: {
-                                CardRow(card: card)
+                        if !activeCards.isEmpty {
+                            Section {
+                                ForEach(activeCards) { card in
+                                    NavigationLink {
+                                        CardDetailView(card: card)
+                                    } label: {
+                                        CardRow(card: card)
+                                    }
+                                }
+                                .onDelete(perform: deleteActiveCards)
+                            } header: {
+                                ActiveStatusSectionHeader(isActive: true)
                             }
                         }
-                        .onDelete(perform: deleteCards)
+
+                        if !inactiveCards.isEmpty {
+                            Section {
+                                ForEach(inactiveCards) { card in
+                                    NavigationLink {
+                                        CardDetailView(card: card)
+                                    } label: {
+                                        CardRow(card: card)
+                                    }
+                                }
+                                .onDelete(perform: deleteInactiveCards)
+                            } header: {
+                                ActiveStatusSectionHeader(isActive: false)
+                            }
+                        }
                     }
                 }
             }
             .navigationTitle("カード")
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    NavigationLink {
+                        CardNotificationSettingsView()
+                    } label: {
+                        Label("通知設定", systemImage: "bell")
+                    }
+
                     Button {
                         showingAddSheet = true
                     } label: {
@@ -52,18 +79,44 @@ struct CardTabView: View {
         }
     }
 
-    private func deleteCards(offsets: IndexSet) {
+    private func deleteActiveCards(offsets: IndexSet) {
         for index in offsets {
-            modelContext.delete(displayedCards[index])
+            modelContext.delete(activeCards[index])
         }
+
+        rescheduleNotifications()
+    }
+
+    private func deleteInactiveCards(offsets: IndexSet) {
+        for index in offsets {
+            modelContext.delete(inactiveCards[index])
+        }
+
+        rescheduleNotifications()
     }
 
     private var displayedCards: [Card] {
         cards.sortedForDisplay()
     }
 
+    private var activeCards: [Card] {
+        displayedCards.filter(\.isActive)
+    }
+
+    private var inactiveCards: [Card] {
+        displayedCards.filter { !$0.isActive }
+    }
+
     private func addSampleData() {
         SampleDataSeeder.seed(in: modelContext)
+        rescheduleNotifications()
+    }
+
+    private func rescheduleNotifications() {
+        Task {
+            try? modelContext.save()
+            await NotificationScheduler.shared.rescheduleAll(using: modelContext)
+        }
     }
 }
 
@@ -72,7 +125,16 @@ private struct CardRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            ActiveStatusRow(card, title: card.name)
+            ActiveStatusRow(card, title: card.name, showIndicator: false)
+
+            if card.isActive, let closingStatus = card.nextClosingStatus {
+                BillingScheduleProgressView(
+                    scheduleLabel: "締日",
+                    countdownLabel: "締日",
+                    status: closingStatus,
+                    isActive: card.isActive
+                )
+            }
 
             if card.isActive, let withdrawalStatus = card.nextWithdrawalStatus {
                 BillingScheduleProgressView(

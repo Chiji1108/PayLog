@@ -33,18 +33,27 @@ struct ActiveStatusRow: View {
     private let isActive: Bool
     private let title: String
     private let trailingText: String?
+    private let showIndicator: Bool
     private let indicator: ActiveStatusIndicator
 
-    init(_ item: some Activatable, title: String, trailingText: String? = nil) {
+    init(
+        _ item: some Activatable,
+        title: String,
+        trailingText: String? = nil,
+        showIndicator: Bool = true
+    ) {
         self.isActive = item.isActive
         self.title = title
         self.trailingText = trailingText
+        self.showIndicator = showIndicator
         self.indicator = ActiveStatusIndicator(item)
     }
 
     var body: some View {
         HStack {
-            indicator
+            if showIndicator {
+                indicator
+            }
 
             Text(title)
                 .font(.headline)
@@ -58,6 +67,23 @@ struct ActiveStatusRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+struct ActiveStatusSectionHeader: View {
+    private let isActive: Bool
+    private let title: String
+
+    init(isActive: Bool, title: String? = nil) {
+        self.isActive = isActive
+        self.title = title ?? (isActive ? "利用中" : "停止中")
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ActiveStatusIndicator(isActive: isActive, statusText: title)
+            Text(title)
+        }
     }
 }
 
