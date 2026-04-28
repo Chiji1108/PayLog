@@ -34,12 +34,9 @@ struct BankEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("状態") {
-                    Toggle("利用中", isOn: $isActive)
-                }
-
                 Section("基本情報") {
                     TextField("銀行名", text: $name)
+                    Toggle("利用中", isOn: $isActive)
                     TextField("支店名", text: $branchName)
                     TextField("口座番号", text: $accountNumber)
                         .keyboardType(.numberPad)

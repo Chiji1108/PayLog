@@ -33,12 +33,9 @@ struct ElectronicMoneyEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("状態") {
-                    Toggle("利用中", isOn: $isActive)
-                }
-
                 Section("基本情報") {
                     TextField("電子マネー名", text: $name)
+                    Toggle("利用中", isOn: $isActive)
                 }
 
                 Section("チャージ元カード") {

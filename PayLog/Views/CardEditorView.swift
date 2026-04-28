@@ -44,12 +44,9 @@ struct CardEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("状態") {
-                    Toggle("利用中", isOn: $isActive)
-                }
-
                 Section("基本情報") {
                     TextField("カード名", text: $name)
+                    Toggle("利用中", isOn: $isActive)
                     TextField("末尾4桁", text: $lastFourDigits)
                         .keyboardType(.numberPad)
                 }

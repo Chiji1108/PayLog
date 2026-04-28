@@ -55,31 +55,23 @@ struct SubscriptionEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("状態") {
+                Section("基本情報") {
+                    TextField("固定費名", text: $name)
                     Toggle("利用中", isOn: $isActive)
                 }
 
-                Section("基本情報") {
-                    TextField("固定費名", text: $name)
-                }
-
-                Section {
-                    HStack(spacing: 12) {
-                        TextField("金額", text: $amountText)
-                            .keyboardType(currency.fractionDigits == 0 ? .numberPad : .decimalPad)
-
-                        Text(currency.editorUnitLabel)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
+                Section("料金") {
+                    TextField("金額", text: $amountText)
+                        .keyboardType(currency.fractionDigits == 0 ? .numberPad : .decimalPad)
 
                     Picker("通貨", selection: $currency) {
                         ForEach(SubscriptionCurrency.allCases) { currency in
                             Text(currency.pickerLabel).tag(currency)
                         }
                     }
+                }
 
+                Section {
                     Stepper(value: $billingInterval, in: 1...24) {
                         LabeledContent("間隔", value: billingFrequency.intervalDescription)
                     }
@@ -92,7 +84,7 @@ struct SubscriptionEditorView: View {
 
                     DatePicker("基準日", selection: $billingAnchorDate, displayedComponents: .date)
                 } header: {
-                    Text("請求情報")
+                    Text("支払い周期")
                 } footer: {
                     Text(billingScheduleFooter)
                 }

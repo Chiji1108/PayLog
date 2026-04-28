@@ -74,7 +74,7 @@ enum SampleDataSeeder {
         )
         let payPay = ElectronicMoney(
             name: "PayPay",
-            notes: "幹事用",
+            notes: "送金用",
             card: master,
             isActive: true,
             createdAt: createdAt(minutesAgo: 140)
