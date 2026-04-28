@@ -51,7 +51,7 @@ struct CardNotificationSettingsView: View {
             }
 
             Section("補足") {
-                Text("29日以降や月またぎになる通知は、iOSの仕様上、継続的に登録できないため次回分のみ登録します。")
+                Text("通知予定日時が月末の場合、アプリを1か月以上起動していないと、iOSの仕様により通知が届かないことがあります。")
             }
         }
         .navigationTitle("カード通知")

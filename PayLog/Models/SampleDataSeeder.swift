@@ -60,7 +60,6 @@ enum SampleDataSeeder {
         let rakuten = Card(
             name: "楽天カード",
             lastFourDigits: "4455",
-            closingDay: 31,
             withdrawalDay: 27,
             notes: "ネット通販用",
             annualFeeSetting: .free,
