@@ -34,6 +34,7 @@ enum SampleDataSeeder {
             name: "三菱UFJ銀行",
             branchName: "新宿支店",
             accountNumber: "7654321",
+            notes: "息子の貯金用口座",
             isActive: false,
             createdAt: createdAt(minutesAgo: 180)
         )
@@ -65,8 +66,9 @@ enum SampleDataSeeder {
         )
         let payPay = ElectronicMoney(
             name: "PayPay",
+            notes: "幹事用",
             card: master,
-            isActive: false,
+            isActive: true,
             createdAt: createdAt(minutesAgo: 140)
         )
 
