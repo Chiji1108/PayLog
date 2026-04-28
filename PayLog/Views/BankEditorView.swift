@@ -34,12 +34,16 @@ struct BankEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("基本情報") {
+                Section {
                     TextField("銀行名", text: $name)
                     Toggle("利用中", isOn: $isActive)
                     TextField("支店名", text: $branchName)
                     TextField("口座番号", text: $accountNumber)
                         .keyboardType(.numberPad)
+                } header: {
+                    Text("基本情報")
+                } footer: {
+                    Text("口座情報を他人に見られたくない場合は、iOSの設定からこのアプリにFace IDによるロックを設定できます。")
                 }
 
                 Section("メモ") {
