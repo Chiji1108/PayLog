@@ -93,6 +93,7 @@ struct SubscriptionInsightsView: View {
 
                                 Text(SubscriptionCurrency.jpy.formattedAmount(item.monthlyAmount))
                                     .fontWeight(.semibold)
+                                    .monospacedDigit()
                             }
                         }
                     }
@@ -135,6 +136,9 @@ struct SubscriptionInsightsView: View {
     private func totalRow(title: String, amount: Decimal) -> some View {
         LabeledContent(title) {
             Text(SubscriptionCurrency.jpy.formattedAmount(amount))
+                .foregroundStyle(.primary)
+                .fontWeight(.semibold)
+                .monospacedDigit()
         }
     }
 
