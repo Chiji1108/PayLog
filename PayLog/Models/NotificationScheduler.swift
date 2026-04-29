@@ -9,6 +9,33 @@ import Foundation
 import SwiftData
 import UserNotifications
 
+struct CardNotificationDeliveryWarning: Identifiable {
+    enum Kind: Int, CaseIterable {
+        case closing
+        case withdrawal
+
+        var label: String {
+            switch self {
+            case .closing:
+                "締日通知"
+            case .withdrawal:
+                "引き落とし日通知"
+            }
+        }
+    }
+
+    let card: Card
+    let kinds: [Kind]
+
+    var id: PersistentIdentifier {
+        card.persistentModelID
+    }
+
+    var summaryText: String {
+        kinds.map(\.label).joined(separator: "・")
+    }
+}
+
 @MainActor
 final class NotificationScheduler {
     static let shared = NotificationScheduler()
@@ -16,6 +43,7 @@ final class NotificationScheduler {
     private let center = UNUserNotificationCenter.current()
     private let calendar = Calendar.autoupdatingCurrent
     private let maximumPendingNotifications = 64
+    private let nonRepeatingRequestCount = 3
 
     private init() {}
 
@@ -71,6 +99,38 @@ final class NotificationScheduler {
         }
     }
 
+    func deliveryWarnings(
+        for cards: [Card],
+        settings: CardNotificationSettings
+    ) -> [CardNotificationDeliveryWarning] {
+        cards
+            .filter(\.isActive)
+            .compactMap { card in
+                var warningKinds: [CardNotificationDeliveryWarning.Kind] = []
+
+                if settings.closingReminderEnabled,
+                   let eventDay = card.normalizedClosingDay,
+                   !supportsRepeatingMonthlyNotification(eventDay: eventDay, daysBefore: settings.closingReminderDaysBefore) {
+                    warningKinds.append(.closing)
+                }
+
+                if settings.withdrawalReminderEnabled,
+                   let eventDay = card.normalizedWithdrawalDay,
+                   !supportsRepeatingMonthlyNotification(eventDay: eventDay, daysBefore: settings.withdrawalReminderDaysBefore) {
+                    warningKinds.append(.withdrawal)
+                }
+
+                guard !warningKinds.isEmpty else {
+                    return nil
+                }
+
+                return CardNotificationDeliveryWarning(card: card, kinds: warningKinds)
+            }
+            .sorted { lhs, rhs in
+                lhs.card.name.localizedStandardCompare(rhs.card.name) == .orderedAscending
+            }
+    }
+
     private func buildRequests(
         cards: [Card],
         cardSettings: CardNotificationSettings
@@ -79,7 +139,7 @@ final class NotificationScheduler {
 
         if cardSettings.closingReminderEnabled {
             requests.append(
-                contentsOf: cards.compactMap { card in
+                contentsOf: cards.flatMap { card in
                     requestForCardClosing(card, settings: cardSettings)
                 }
             )
@@ -87,7 +147,7 @@ final class NotificationScheduler {
 
         if cardSettings.withdrawalReminderEnabled {
             requests.append(
-                contentsOf: cards.compactMap { card in
+                contentsOf: cards.flatMap { card in
                     requestForCardWithdrawal(card, settings: cardSettings)
                 }
             )
@@ -99,9 +159,9 @@ final class NotificationScheduler {
     private func requestForCardClosing(
         _ card: Card,
         settings: CardNotificationSettings
-    ) -> ScheduledNotificationRequest? {
+    ) -> [ScheduledNotificationRequest] {
         guard card.isActive else {
-            return nil
+            return []
         }
 
         let content = UNMutableNotificationContent()
@@ -124,9 +184,9 @@ final class NotificationScheduler {
     private func requestForCardWithdrawal(
         _ card: Card,
         settings: CardNotificationSettings
-    ) -> ScheduledNotificationRequest? {
+    ) -> [ScheduledNotificationRequest] {
         guard card.isActive else {
-            return nil
+            return []
         }
 
         let content = UNMutableNotificationContent()
@@ -153,9 +213,9 @@ final class NotificationScheduler {
         daysBefore: Int,
         time: NotificationTime,
         statusProvider: (Date) -> BillingScheduleStatus?
-    ) -> ScheduledNotificationRequest? {
+    ) -> [ScheduledNotificationRequest] {
         guard let eventDay else {
-            return nil
+            return []
         }
 
         if let repeatingRequest = repeatingMonthlyRequest(
@@ -165,22 +225,27 @@ final class NotificationScheduler {
             daysBefore: daysBefore,
             time: time
         ) {
-            return repeatingRequest
+            return [repeatingRequest]
         }
 
-        guard let triggerDate = nextNotificationDate(
+        let triggerDates = nextNotificationDates(
             using: statusProvider,
             daysBefore: daysBefore,
-            time: time
-        ) else {
-            return nil
+            time: time,
+            count: nonRepeatingRequestCount
+        )
+
+        guard !triggerDates.isEmpty else {
+            return []
         }
 
-        return ScheduledNotificationRequest(
-            identifier: identifier,
-            triggerDate: triggerDate,
-            content: content
-        )
+        return triggerDates.enumerated().map { index, triggerDate in
+            ScheduledNotificationRequest(
+                identifier: "\(identifier).\(index)",
+                triggerDate: triggerDate,
+                content: content
+            )
+        }
     }
 
     private func repeatingMonthlyRequest(
@@ -190,9 +255,7 @@ final class NotificationScheduler {
         daysBefore: Int,
         time: NotificationTime
     ) -> ScheduledNotificationRequest? {
-        guard (1...28).contains(eventDay),
-              daysBefore >= 0,
-              eventDay - daysBefore >= 1 else {
+        guard supportsRepeatingMonthlyNotification(eventDay: eventDay, daysBefore: daysBefore) else {
             return nil
         }
 
@@ -213,28 +276,34 @@ final class NotificationScheduler {
         )
     }
 
-    private func nextNotificationDate(
+    private func nextNotificationDates(
         using statusProvider: (Date) -> BillingScheduleStatus?,
         daysBefore: Int,
-        time: NotificationTime
-    ) -> Date? {
+        time: NotificationTime,
+        count: Int
+    ) -> [Date] {
         let now = Date.now
+        var dates: [Date] = []
+        var referenceDate = now
 
-        guard let firstStatus = statusProvider(now),
-              let firstDate = notificationDate(for: firstStatus.nextDate, daysBefore: daysBefore, time: time) else {
-            return nil
+        while dates.count < count {
+            guard let status = statusProvider(referenceDate),
+                  let triggerDate = notificationDate(for: status.nextDate, daysBefore: daysBefore, time: time) else {
+                break
+            }
+
+            if triggerDate > now {
+                dates.append(triggerDate)
+            }
+
+            guard let nextReferenceDate = calendar.date(byAdding: .day, value: 1, to: status.nextDate) else {
+                break
+            }
+
+            referenceDate = nextReferenceDate
         }
 
-        if firstDate > now {
-            return firstDate
-        }
-
-        guard let nextReferenceDate = calendar.date(byAdding: .day, value: 1, to: firstStatus.nextDate),
-              let nextStatus = statusProvider(nextReferenceDate) else {
-            return nil
-        }
-
-        return notificationDate(for: nextStatus.nextDate, daysBefore: daysBefore, time: time)
+        return dates
     }
 
     private func notificationDate(for eventDate: Date, daysBefore: Int, time: NotificationTime) -> Date? {
@@ -260,6 +329,12 @@ final class NotificationScheduler {
 
     private func dayBeforeText(_ value: Int) -> String {
         value == 0 ? "当日" : "\(value)日前"
+    }
+
+    private func supportsRepeatingMonthlyNotification(eventDay: Int, daysBefore: Int) -> Bool {
+        (1...28).contains(eventDay)
+            && daysBefore >= 0
+            && eventDay - daysBefore >= 1
     }
 
     private func closingReminderBody(daysBefore: Int) -> String {

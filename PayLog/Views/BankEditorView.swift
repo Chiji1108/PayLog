@@ -20,6 +20,7 @@ struct BankEditorView: View {
     @State private var notes = ""
     @State private var isActive = true
     @State private var deleteRequest: DeleteRequest<Bank>?
+    @State private var hasAttemptedSave = false
 
     init(bank: Bank? = nil, onDelete: (() -> Void)? = nil) {
         self.bank = bank
@@ -40,10 +41,15 @@ struct BankEditorView: View {
                     TextField("支店名", text: $branchName)
                     TextField("口座番号", text: $accountNumber)
                         .keyboardType(.numberPad)
+                        .onChange(of: accountNumber) { _, newValue in
+                            accountNumber = newValue.filter(\.isNumber)
+                        }
                 } header: {
                     Text("基本情報")
                 } footer: {
-                    Text("口座情報を他人に見られたくない場合は、iOSの設定からこのアプリにFace IDによるロックを設定できます。")
+                    if let basicInformationMessage {
+                        Text(basicInformationMessage)
+                    }
                 }
 
                 Section("メモ") {
@@ -74,6 +80,12 @@ struct BankEditorView: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
+                        hasAttemptedSave = true
+
+                        guard !trimmedName.isEmpty else {
+                            return
+                        }
+
                         if let bank {
                             bank.name = trimmedName
                             bank.branchName = trimmedBranchName
@@ -112,6 +124,26 @@ struct BankEditorView: View {
 
     private var trimmedNotes: String? {
         normalizedOptionalText(notes)
+    }
+
+    private var basicInformationMessage: String? {
+        guard hasAttemptedSave else {
+            if trimmedAccountNumber != nil {
+                return "口座情報を扱うため、必要に応じてiPhoneのロックやアプリごとのFace ID保護を設定しておくと安心です。"
+            }
+
+            return nil
+        }
+
+        if trimmedName.isEmpty {
+            return "銀行名を入力してください。"
+        }
+
+        if trimmedAccountNumber != nil {
+            return "口座情報を扱うため、必要に応じてiPhoneのロックやアプリごとのFace ID保護を設定しておくと安心です。"
+        }
+
+        return nil
     }
 
     private func normalizedOptionalText(_ text: String) -> String? {

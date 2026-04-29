@@ -9,6 +9,18 @@ import Foundation
 import SwiftData
 
 enum SampleDataSeeder {
+    static func hasAnyData(in context: ModelContext) -> Bool {
+        hasRecords(Bank.self, in: context)
+            || hasRecords(Card.self, in: context)
+            || hasRecords(ElectronicMoney.self, in: context)
+            || hasRecords(SubscriptionItem.self, in: context)
+    }
+
+    static func replaceAllWithSampleData(in context: ModelContext) {
+        deleteAllData(in: context)
+        seed(in: context)
+    }
+
     static func seed(in context: ModelContext) {
         let calendar = Calendar.autoupdatingCurrent
         let now = Date()
@@ -176,5 +188,32 @@ enum SampleDataSeeder {
         context.insert(chatGPTPlus)
         context.insert(oliveAnnualFee)
         context.insert(mufgAnnualFee)
+    }
+
+    private static func deleteAllData(in context: ModelContext) {
+        deleteRecords(SubscriptionItem.self, in: context)
+        deleteRecords(ElectronicMoney.self, in: context)
+        deleteRecords(Card.self, in: context)
+        deleteRecords(Bank.self, in: context)
+    }
+
+    private static func hasRecords<Model: PersistentModel>(
+        _ modelType: Model.Type,
+        in context: ModelContext
+    ) -> Bool {
+        let descriptor = FetchDescriptor<Model>()
+        return ((try? context.fetchCount(descriptor)) ?? 0) > 0
+    }
+
+    private static func deleteRecords<Model: PersistentModel>(
+        _ modelType: Model.Type,
+        in context: ModelContext
+    ) {
+        let descriptor = FetchDescriptor<Model>()
+        let records = (try? context.fetch(descriptor)) ?? []
+
+        for record in records {
+            context.delete(record)
+        }
     }
 }

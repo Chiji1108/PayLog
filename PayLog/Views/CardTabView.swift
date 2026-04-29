@@ -21,7 +21,8 @@ struct CardTabView: View {
                         title: "カードがまだありません",
                         systemImage: "creditcard",
                         description: "銀行口座を登録しておくと、スムーズに追加できます。",
-                        addSampleData: addSampleData
+                        shouldConfirmReplacement: shouldConfirmSampleDataReplacement,
+                        applySampleData: applySampleData
                     )
                 } else {
                     List {
@@ -107,8 +108,12 @@ struct CardTabView: View {
         displayedCards.filter { !$0.isActive }
     }
 
-    private func addSampleData() {
-        SampleDataSeeder.seed(in: modelContext)
+    private func shouldConfirmSampleDataReplacement() -> Bool {
+        SampleDataSeeder.hasAnyData(in: modelContext)
+    }
+
+    private func applySampleData() {
+        SampleDataSeeder.replaceAllWithSampleData(in: modelContext)
         rescheduleNotifications()
     }
 

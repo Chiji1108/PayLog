@@ -22,7 +22,8 @@ struct SubscriptionTabView: View {
                         title: "固定費がまだありません",
                         systemImage: "repeat.circle",
                         description: "カードや銀行口座を登録しておくと、スムーズに追加できます。",
-                        addSampleData: addSampleData
+                        shouldConfirmReplacement: shouldConfirmSampleDataReplacement,
+                        applySampleData: applySampleData
                     )
                 } else {
                     List {
@@ -145,8 +146,12 @@ struct SubscriptionTabView: View {
         filteredSubscriptions.filter { !$0.isActive }
     }
 
-    private func addSampleData() {
-        SampleDataSeeder.seed(in: modelContext)
+    private func shouldConfirmSampleDataReplacement() -> Bool {
+        SampleDataSeeder.hasAnyData(in: modelContext)
+    }
+
+    private func applySampleData() {
+        SampleDataSeeder.replaceAllWithSampleData(in: modelContext)
     }
 }
 

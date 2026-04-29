@@ -21,7 +21,8 @@ struct BankTabView: View {
                         title: "銀行口座がまだありません",
                         systemImage: "building.columns",
                         description: "最初に銀行口座を登録すると、次にカードや固定費を紐付けできます。",
-                        addSampleData: addSampleData
+                        shouldConfirmReplacement: shouldConfirmSampleDataReplacement,
+                        applySampleData: applySampleData
                     )
                 } else {
                     List {
@@ -97,8 +98,12 @@ struct BankTabView: View {
         displayedBanks.filter { !$0.isActive }
     }
 
-    private func addSampleData() {
-        SampleDataSeeder.seed(in: modelContext)
+    private func shouldConfirmSampleDataReplacement() -> Bool {
+        SampleDataSeeder.hasAnyData(in: modelContext)
+    }
+
+    private func applySampleData() {
+        SampleDataSeeder.replaceAllWithSampleData(in: modelContext)
     }
 }
 

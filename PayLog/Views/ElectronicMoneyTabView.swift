@@ -21,7 +21,8 @@ struct ElectronicMoneyTabView: View {
                         title: "電子マネーがまだありません",
                         systemImage: "iphone.gen3",
                         description: "カードを登録しておくと、スムーズに追加できます。",
-                        addSampleData: addSampleData
+                        shouldConfirmReplacement: shouldConfirmSampleDataReplacement,
+                        applySampleData: applySampleData
                     )
                 } else {
                     List {
@@ -97,8 +98,12 @@ struct ElectronicMoneyTabView: View {
         displayedElectronicMoneys.filter { !$0.isActive }
     }
 
-    private func addSampleData() {
-        SampleDataSeeder.seed(in: modelContext)
+    private func shouldConfirmSampleDataReplacement() -> Bool {
+        SampleDataSeeder.hasAnyData(in: modelContext)
+    }
+
+    private func applySampleData() {
+        SampleDataSeeder.replaceAllWithSampleData(in: modelContext)
     }
 }
 

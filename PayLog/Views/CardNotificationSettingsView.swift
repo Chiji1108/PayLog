@@ -13,6 +13,7 @@ import UIKit
 struct CardNotificationSettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
+    @Query(sort: \Card.name) private var cards: [Card]
 
     @State private var settings = NotificationSettingsStore.loadCardSettings()
     @State private var authorizationStatus: UNAuthorizationStatus = .notDetermined
@@ -50,8 +51,17 @@ struct CardNotificationSettingsView: View {
                 }
             }
 
-            Section("補足") {
-                Text("通知予定日時が月末の場合、アプリを1か月以上起動していないと、iOSの仕様により通知が届かないことがあります。")
+            if !deliveryWarnings.isEmpty {
+                Section("補足") {
+                    Text("次のカードは通知予定日が月末のため、iOSの仕様によりアプリを3ヶ月以上起動していないと、通知が届かないことがあります。")
+
+                    ForEach(deliveryWarnings) { warning in
+                        LabeledContent(warning.card.name) {
+                            Text(warning.summaryText)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
             }
         }
         .navigationTitle("カード通知")
@@ -93,6 +103,10 @@ struct CardNotificationSettingsView: View {
 
     private var hasEnabledNotification: Bool {
         settings.closingReminderEnabled || settings.withdrawalReminderEnabled
+    }
+
+    private var deliveryWarnings: [CardNotificationDeliveryWarning] {
+        NotificationScheduler.shared.deliveryWarnings(for: cards, settings: settings)
     }
 
     private func notificationSection(

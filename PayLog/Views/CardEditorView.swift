@@ -26,6 +26,7 @@ struct CardEditorView: View {
     @State private var annualFeeSetting: CardAnnualFeeSetting
     @State private var selectedAnnualFeeSubscriptionID: PersistentIdentifier?
     @State private var deleteRequest: DeleteRequest<Card>?
+    @State private var hasAttemptedSave = false
 
     init(card: Card? = nil, onDelete: (() -> Void)? = nil) {
         self.card = card
@@ -44,14 +45,23 @@ struct CardEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("基本情報") {
+                Section {
                     TextField("カード名", text: $name)
                     Toggle("利用中", isOn: $isActive)
                     TextField("末尾4桁", text: $lastFourDigits)
                         .keyboardType(.numberPad)
+                        .onChange(of: lastFourDigits) { _, newValue in
+                            lastFourDigits = String(newValue.filter(\.isNumber).prefix(4))
+                        }
+                } header: {
+                    Text("基本情報")
+                } footer: {
+                    if let basicInformationMessage {
+                        Text(basicInformationMessage)
+                    }
                 }
 
-                Section("引き落とし口座") {
+                Section {
                     Picker("銀行口座", selection: $selectedBankID) {
                         Text("未設定").tag(Optional<PersistentIdentifier>.none)
 
@@ -59,6 +69,9 @@ struct CardEditorView: View {
                             Text(bank.name).tag(Optional(bank.persistentModelID))
                         }
                     }
+                } header: {
+                    Text("引き落とし口座")
+                } footer: {
                 }
 
                 Section {
@@ -120,6 +133,12 @@ struct CardEditorView: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
+                        hasAttemptedSave = true
+
+                        guard !isSaveDisabled else {
+                            return
+                        }
+
                         if let card {
                             card.name = trimmedName
                             card.lastFourDigits = trimmedLastFourDigits
@@ -154,7 +173,7 @@ struct CardEditorView: View {
                         }
                         dismiss()
                     }
-                    .disabled(trimmedName.isEmpty)
+                    .disabled(isSaveDisabled)
                 }
             }
         }
@@ -209,11 +228,43 @@ struct CardEditorView: View {
     }
 
     private var annualFeeFooterText: String {
-        if annualFeeSetting == .paid, availableAnnualFeeSubscriptions.isEmpty {
-            return "有料を選んだ場合は固定費も紐づけられます。まだ候補の年単位固定費がありません。"
+        guard annualFeeSetting == .paid else {
+            return ""
         }
 
-        return "有料を選んだ場合は固定費も紐づけられます。候補には年単位の固定費だけ表示し、別カードの年会費に使っている固定費は除外します。"
+        if annualFeeSetting == .paid, availableAnnualFeeSubscriptions.isEmpty {
+            return "紐付けできる年単位の固定費がまだありません。"
+        }
+
+        if annualFeeSetting == .paid, selectedAnnualFeeSubscription == nil {
+            return "必要なら年会費の固定費を紐付けられます。"
+        }
+
+        return ""
+    }
+
+    private var isSaveDisabled: Bool {
+        trimmedName.isEmpty || lastFourDigitsValidationMessage != nil
+    }
+
+    private var basicInformationMessage: String? {
+        guard hasAttemptedSave else {
+            return nil
+        }
+
+        if trimmedName.isEmpty {
+            return "カード名を入力してください。"
+        }
+
+        return lastFourDigitsValidationMessage
+    }
+
+    private var lastFourDigitsValidationMessage: String? {
+        guard !lastFourDigits.isEmpty else {
+            return nil
+        }
+
+        return lastFourDigits.count == 4 ? nil : "末尾4桁は数字4桁で入力してください。"
     }
 
     private func normalizedOptionalText(_ text: String) -> String? {

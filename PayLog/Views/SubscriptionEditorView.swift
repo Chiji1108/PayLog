@@ -28,6 +28,7 @@ struct SubscriptionEditorView: View {
     @State private var selectedCardID: PersistentIdentifier?
     @State private var selectedBankID: PersistentIdentifier?
     @State private var deleteRequest: DeleteRequest<SubscriptionItem>?
+    @State private var hasAttemptedSave = false
 
     init(subscription: SubscriptionItem? = nil, onDelete: (() -> Void)? = nil) {
         self.subscription = subscription
@@ -55,12 +56,18 @@ struct SubscriptionEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("基本情報") {
+                Section {
                     TextField("固定費名", text: $name)
                     Toggle("利用中", isOn: $isActive)
+                } header: {
+                    Text("基本情報")
+                } footer: {
+                    if hasAttemptedSave, trimmedName.isEmpty {
+                        Text("固定費名を入力してください。")
+                    }
                 }
 
-                Section("料金") {
+                Section {
                     TextField("金額", text: $amountText)
                         .keyboardType(currency.fractionDigits == 0 ? .numberPad : .decimalPad)
 
@@ -68,6 +75,12 @@ struct SubscriptionEditorView: View {
                         ForEach(SubscriptionCurrency.allCases) { currency in
                             Text(currency.pickerLabel).tag(currency)
                         }
+                    }
+                } header: {
+                    Text("料金")
+                } footer: {
+                    if let amountValidationMessage, hasAttemptedSave {
+                        Text(amountValidationMessage)
                     }
                 }
 
@@ -89,7 +102,7 @@ struct SubscriptionEditorView: View {
                     Text(billingScheduleFooter)
                 }
 
-                Section("支払い方法") {
+                Section {
                     Picker("方法", selection: $paymentMethod) {
                         ForEach(SubscriptionPaymentMethod.allCases) { method in
                             Text(method.label).tag(method)
@@ -126,6 +139,9 @@ struct SubscriptionEditorView: View {
                     case .invoice, .onSite, .unspecified:
                         EmptyView()
                     }
+                } header: {
+                    Text("支払い方法")
+                } footer: {
                 }
 
                 Section("メモ") {
@@ -164,6 +180,8 @@ struct SubscriptionEditorView: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
+                        hasAttemptedSave = true
+
                         guard let amount = parsedAmount, amount > 0 else {
                             return
                         }
@@ -202,7 +220,7 @@ struct SubscriptionEditorView: View {
                         try? modelContext.save()
                         dismiss()
                     }
-                    .disabled(trimmedName.isEmpty || !hasValidAmount)
+                    .disabled(isSaveDisabled)
                 }
             }
         }
@@ -257,10 +275,30 @@ struct SubscriptionEditorView: View {
         return amount > 0
     }
 
+    private var isSaveDisabled: Bool {
+        trimmedName.isEmpty || !hasValidAmount
+    }
+
+    private var amountValidationMessage: String? {
+        if trimmedAmountText.isEmpty {
+            return "0より大きい金額を入力してください。"
+        }
+
+        guard let amount = parsedAmount else {
+            return "金額の形式を確認してください。"
+        }
+
+        guard amount > 0 else {
+            return "0より大きい金額を入力してください。"
+        }
+
+        return nil
+    }
+
     private var billingScheduleFooter: String {
         switch billingUnit {
         case .week:
-            "選んだ基準日を起点に、同じ曜日で繰り返します。2週間以上では基準日も周期の判定に使います。"
+            "選んだ基準日を起点に、同じ曜日で繰り返します。"
         case .month:
             "選んだ基準日を起点に、同じ日付で繰り返します。存在しない日は月末に丸めます。"
         case .year:
