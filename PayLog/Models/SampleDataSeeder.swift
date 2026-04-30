@@ -50,6 +50,13 @@ enum SampleDataSeeder {
             isActive: false,
             createdAt: createdAt(minutesAgo: 180)
         )
+        let rakutenBank = Bank(
+            name: "楽天銀行",
+            branchName: "第一営業支店",
+            accountNumber: "2468135",
+            notes: "楽天カード引き落とし用",
+            createdAt: createdAt(minutesAgo: 115)
+        )
 
         let visa = Card(
             name: "Olive",
@@ -73,7 +80,8 @@ enum SampleDataSeeder {
             name: "楽天カード",
             lastFourDigits: "4455",
             withdrawalDay: 27,
-            notes: "あとで口座設定する",
+            notes: "生活費サブ",
+            bank: rakutenBank,
             annualFeeSetting: .free,
             createdAt: createdAt(minutesAgo: 110)
         )
@@ -138,7 +146,9 @@ enum SampleDataSeeder {
             billingInterval: 3,
             billingUnit: .month,
             billingAnchorDate: anchoredDate(year: currentYear, month: 4, day: 30),
-            paymentMethod: .invoice
+            paymentMethod: .bankAccount,
+            notes: "実家",
+            bank: mitsui
         )
         let chatGPTPlus = SubscriptionItem(
             name: "ChatGPT Plus",
@@ -175,6 +185,7 @@ enum SampleDataSeeder {
 
         context.insert(mitsui)
         context.insert(mufg)
+        context.insert(rakutenBank)
         context.insert(visa)
         context.insert(master)
         context.insert(rakuten)

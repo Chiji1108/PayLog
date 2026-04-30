@@ -35,12 +35,9 @@ struct BankDetailView: View {
                 }
             }
 
-            Section("メモ") {
-                if let notes = bank.trimmedNotes {
+            if let notes = bank.trimmedNotes {
+                Section("メモ") {
                     Text(notes)
-                } else {
-                    Text("未設定")
-                        .foregroundStyle(.secondary)
                 }
             }
 

@@ -69,12 +69,9 @@ struct CardDetailView: View {
                 }
             }
 
-            Section("メモ") {
-                if let notes = card.trimmedNotes {
+            if let notes = card.trimmedNotes {
+                Section("メモ") {
                     Text(notes)
-                } else {
-                    Text("未設定")
-                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -97,7 +94,7 @@ struct CardDetailView: View {
                 }
             }
 
-            Section("このカードに紐づく電子マネー") {
+            Section("このカードでチャージする電子マネー") {
                 if sortedElectronicMoneys.isEmpty {
                     Text("まだ電子マネーはありません")
                         .foregroundStyle(.secondary)

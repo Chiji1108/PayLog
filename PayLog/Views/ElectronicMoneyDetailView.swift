@@ -33,12 +33,9 @@ struct ElectronicMoneyDetailView: View {
                 }
             }
 
-            Section("メモ") {
-                if let notes = electronicMoney.trimmedNotes {
+            if let notes = electronicMoney.trimmedNotes {
+                Section("メモ") {
                     Text(notes)
-                } else {
-                    Text("未設定")
-                        .foregroundStyle(.secondary)
                 }
             }
         }
