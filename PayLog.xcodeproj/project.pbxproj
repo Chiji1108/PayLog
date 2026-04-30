@@ -29,11 +29,6 @@
 			path = PayLog;
 			sourceTree = "<group>";
 		};
-		C6B1A6CB2F9E45F200C7CB7C /* Archive */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Archive;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -50,7 +45,6 @@
 		C6A3EA8C2F78083400A34B8F = {
 			isa = PBXGroup;
 			children = (
-				C6B1A6CB2F9E45F200C7CB7C /* Archive */,
 				C6A3EA972F78083400A34B8F /* PayLog */,
 				C6A3EA962F78083400A34B8F /* Products */,
 			);
@@ -81,7 +75,6 @@
 			);
 			fileSystemSynchronizedGroups = (
 				C6A3EA972F78083400A34B8F /* PayLog */,
-				C6B1A6CB2F9E45F200C7CB7C /* Archive */,
 			);
 			name = PayLog;
 			packageProductDependencies = (
