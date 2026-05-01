@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import TipKit
 
 struct ElectronicMoneyTabView: View {
     @Environment(\.modelContext) private var modelContext
@@ -36,6 +37,7 @@ struct ElectronicMoneyTabView: View {
                                     } label: {
                                         ElectronicMoneyRow(electronicMoney: electronicMoney)
                                     }
+                                    .swipeToDeleteTip(isPresented: electronicMoney.id == displayedElectronicMoneys.first?.id)
                                 }
                                 .onDelete(perform: deleteActiveElectronicMoneys)
                             } header: {
@@ -51,6 +53,7 @@ struct ElectronicMoneyTabView: View {
                                     } label: {
                                         ElectronicMoneyRow(electronicMoney: electronicMoney)
                                     }
+                                    .swipeToDeleteTip(isPresented: electronicMoney.id == displayedElectronicMoneys.first?.id)
                                 }
                                 .onDelete(perform: deleteInactiveElectronicMoneys)
                             } header: {
@@ -74,6 +77,15 @@ struct ElectronicMoneyTabView: View {
                 ElectronicMoneyEditorView(electronicMoney: nil, onDelete: nil, onCreate: {
                     hasCreatedItemInPresentedSheet = true
                 })
+            }
+            .onChange(of: electronicMoneys.count) { oldValue, newValue in
+                guard oldValue == 0, newValue > 0 else {
+                    return
+                }
+
+                Task {
+                    await SwipeToDeleteTip.listReceivedFirstItem.donate()
+                }
             }
         }
         .reviewRequestAfterCreation(trigger: reviewRequestTrigger)

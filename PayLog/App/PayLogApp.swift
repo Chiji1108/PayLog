@@ -7,9 +7,18 @@
 
 import SwiftUI
 import SwiftData
+import TipKit
 
 @main
 struct PayLogApp: App {
+    init() {
+        do {
+            try Tips.configure()
+        } catch {
+            assertionFailure("Failed to configure TipKit: \(error.localizedDescription)")
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import TipKit
 
 struct SubscriptionTabView: View {
     @Environment(\.modelContext) private var modelContext
@@ -46,6 +47,7 @@ struct SubscriptionTabView: View {
                                         } label: {
                                             SubscriptionRow(subscription: subscription)
                                         }
+                                        .swipeToDeleteTip(isPresented: subscription.id == filteredSubscriptions.first?.id)
                                     }
                                     .onDelete(perform: deleteActiveSubscriptions)
                                 } header: {
@@ -61,6 +63,7 @@ struct SubscriptionTabView: View {
                                         } label: {
                                             SubscriptionRow(subscription: subscription)
                                         }
+                                        .swipeToDeleteTip(isPresented: subscription.id == filteredSubscriptions.first?.id)
                                     }
                                     .onDelete(perform: deleteInactiveSubscriptions)
                                 } header: {
@@ -110,6 +113,15 @@ struct SubscriptionTabView: View {
             .onChange(of: availableFrequencies) { _, newValue in
                 if case let .frequency(frequency) = selectedFilter, !newValue.contains(frequency) {
                     selectedFilter = .all
+                }
+            }
+            .onChange(of: subscriptions.count) { oldValue, newValue in
+                guard oldValue == 0, newValue > 0 else {
+                    return
+                }
+
+                Task {
+                    await SwipeToDeleteTip.listReceivedFirstItem.donate()
                 }
             }
         }

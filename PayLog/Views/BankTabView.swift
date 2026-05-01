@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import TipKit
 
 struct BankTabView: View {
     @Environment(\.modelContext) private var modelContext
@@ -36,6 +37,7 @@ struct BankTabView: View {
                                     } label: {
                                         BankRow(bank: bank)
                                     }
+                                    .swipeToDeleteTip(isPresented: bank.id == displayedBanks.first?.id)
                                 }
                                 .onDelete(perform: deleteActiveBanks)
                             } header: {
@@ -51,6 +53,7 @@ struct BankTabView: View {
                                     } label: {
                                         BankRow(bank: bank)
                                     }
+                                    .swipeToDeleteTip(isPresented: bank.id == displayedBanks.first?.id)
                                 }
                                 .onDelete(perform: deleteInactiveBanks)
                             } header: {
@@ -74,6 +77,15 @@ struct BankTabView: View {
                 BankEditorView(bank: nil, onDelete: nil, onCreate: {
                     hasCreatedItemInPresentedSheet = true
                 })
+            }
+            .onChange(of: banks.count) { oldValue, newValue in
+                guard oldValue == 0, newValue > 0 else {
+                    return
+                }
+
+                Task {
+                    await SwipeToDeleteTip.listReceivedFirstItem.donate()
+                }
             }
         }
         .reviewRequestAfterCreation(trigger: reviewRequestTrigger)

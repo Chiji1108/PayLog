@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import TipKit
 
 struct CardTabView: View {
     @Environment(\.modelContext) private var modelContext
@@ -36,6 +37,7 @@ struct CardTabView: View {
                                     } label: {
                                         CardRow(card: card)
                                     }
+                                    .swipeToDeleteTip(isPresented: card.id == displayedCards.first?.id)
                                 }
                                 .onDelete(perform: deleteActiveCards)
                             } header: {
@@ -51,6 +53,7 @@ struct CardTabView: View {
                                     } label: {
                                         CardRow(card: card)
                                     }
+                                    .swipeToDeleteTip(isPresented: card.id == displayedCards.first?.id)
                                 }
                                 .onDelete(perform: deleteInactiveCards)
                             } header: {
@@ -80,6 +83,15 @@ struct CardTabView: View {
                 CardEditorView(card: nil, onDelete: nil, onCreate: {
                     hasCreatedItemInPresentedSheet = true
                 })
+            }
+            .onChange(of: cards.count) { oldValue, newValue in
+                guard oldValue == 0, newValue > 0 else {
+                    return
+                }
+
+                Task {
+                    await SwipeToDeleteTip.listReceivedFirstItem.donate()
+                }
             }
         }
         .reviewRequestAfterCreation(trigger: reviewRequestTrigger)

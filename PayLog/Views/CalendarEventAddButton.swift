@@ -63,30 +63,19 @@ struct CalendarEventAddButton<Label: View>: View {
     @ViewBuilder let label: () -> Label
 
     @State private var selectedDraft: CalendarEventDraft?
-    @State private var showingUnsupportedAlert = false
 
     var body: some View {
         Button {
-            if #available(iOS 17.0, *) {
-                selectedDraft = draft
-            } else {
-                showingUnsupportedAlert = true
-            }
+            selectedDraft = draft
         } label: {
             label()
         }
         .sheet(item: $selectedDraft) { draft in
             CalendarEventEditorSheet(draft: draft)
         }
-        .alert("この機能はiOS 17以降で使えます", isPresented: $showingUnsupportedAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("カレンダー追加UIは、このバージョンのiOSでは利用できません。")
-        }
     }
 }
 
-@available(iOS 17.0, *)
 struct CalendarEventEditorSheet: UIViewControllerRepresentable {
     let draft: CalendarEventDraft
 
