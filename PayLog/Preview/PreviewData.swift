@@ -24,7 +24,7 @@ enum PreviewData {
 
         do {
             let container = try ModelContainer(for: schema, configurations: [configuration])
-            SampleDataSeeder.seed(in: container.mainContext)
+            SampleDataSeeder.seedPreviewData(in: container.mainContext)
             return container
         } catch {
             fatalError("Could not create preview container: \(error)")

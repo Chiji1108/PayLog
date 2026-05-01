@@ -22,6 +22,10 @@ enum SampleDataSeeder {
     }
 
     static func seed(in context: ModelContext) {
+        seedRuntimeSampleData(in: context)
+    }
+
+    static func seedPreviewData(in context: ModelContext) {
         let calendar = Calendar.autoupdatingCurrent
         let now = Date()
 
@@ -199,6 +203,110 @@ enum SampleDataSeeder {
         context.insert(chatGPTPlus)
         context.insert(oliveAnnualFee)
         context.insert(mufgAnnualFee)
+    }
+
+    private static func seedRuntimeSampleData(in context: ModelContext) {
+        let calendar = Calendar.autoupdatingCurrent
+        let now = Date()
+
+        func anchoredDate(year: Int, month: Int, day: Int) -> Date {
+            let components = DateComponents(year: year, month: month, day: day)
+            return calendar.date(from: components) ?? now
+        }
+
+        func createdAt(minutesAgo: Int) -> Date {
+            calendar.date(byAdding: .minute, value: -minutesAgo, to: now) ?? now
+        }
+
+        let currentYear = calendar.component(.year, from: now)
+        let mitsui = Bank(
+            name: "三井住友銀行",
+            branchName: "渋谷支店",
+            accountNumber: "1234567",
+            notes: "生活費",
+            createdAt: createdAt(minutesAgo: 120)
+        )
+        let mufg = Bank(
+            name: "三菱UFJ銀行",
+            branchName: "新宿支店",
+            accountNumber: "7654321",
+            notes: "貯蓄用",
+            createdAt: createdAt(minutesAgo: 180)
+        )
+
+        let visa = Card(
+            name: "Olive",
+            lastFourDigits: "1234",
+            closingDay: 15,
+            withdrawalDay: 26,
+            notes: "メインカード",
+            bank: mitsui,
+            createdAt: createdAt(minutesAgo: 100)
+        )
+        let master = Card(
+            name: "MUFG Card",
+            lastFourDigits: "9876",
+            closingDay: 31,
+            withdrawalDay: 10,
+            bank: mufg,
+            annualFeeSetting: .free,
+            createdAt: createdAt(minutesAgo: 160)
+        )
+
+        let suica = ElectronicMoney(
+            name: "Suica",
+            notes: "通勤用",
+            card: visa,
+            createdAt: createdAt(minutesAgo: 80)
+        )
+        let payPay = ElectronicMoney(
+            name: "PayPay",
+            notes: "日常の少額決済",
+            card: master,
+            createdAt: createdAt(minutesAgo: 140)
+        )
+
+        let netflix = SubscriptionItem(
+            name: "Netflix",
+            amount: 1490,
+            createdAt: createdAt(minutesAgo: 10),
+            billingUnit: .month,
+            billingAnchorDate: anchoredDate(year: currentYear, month: 3, day: 18),
+            paymentMethod: .card,
+            notes: "家族共有",
+            card: visa
+        )
+        let oliveAnnualFee = SubscriptionItem(
+            name: "Olive 年会費",
+            amount: 5500,
+            createdAt: createdAt(minutesAgo: 40),
+            billingUnit: .year,
+            billingAnchorDate: anchoredDate(year: currentYear, month: 5, day: 1),
+            paymentMethod: .bankAccount,
+            bank: mitsui
+        )
+        let chatGPTPlus = SubscriptionItem(
+            name: "ChatGPT Plus",
+            amount: 20.00,
+            createdAt: createdAt(minutesAgo: 15),
+            billingUnit: .month,
+            currency: .usd,
+            billingAnchorDate: anchoredDate(year: currentYear, month: 11, day: 30),
+            paymentMethod: .card,
+            card: visa
+        )
+
+        visa.annualFeeSubscription = oliveAnnualFee
+
+        context.insert(mitsui)
+        context.insert(mufg)
+        context.insert(visa)
+        context.insert(master)
+        context.insert(suica)
+        context.insert(payPay)
+        context.insert(netflix)
+        context.insert(oliveAnnualFee)
+        context.insert(chatGPTPlus)
     }
 
     private static func deleteAllData(in context: ModelContext) {
