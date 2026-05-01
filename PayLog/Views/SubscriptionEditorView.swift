@@ -188,7 +188,7 @@ struct SubscriptionEditorView: View {
                     Button("保存") {
                         hasAttemptedSave = true
 
-                        guard let amount = parsedAmount, amount > 0 else {
+                        guard let amount = parsedAmount, amount >= 0 else {
                             return
                         }
 
@@ -278,7 +278,7 @@ struct SubscriptionEditorView: View {
             return false
         }
 
-        return amount > 0
+        return amount >= 0
     }
 
     private var isSaveDisabled: Bool {
@@ -287,15 +287,15 @@ struct SubscriptionEditorView: View {
 
     private var amountValidationMessage: String? {
         if trimmedAmountText.isEmpty {
-            return "0より大きい金額を入力してください。"
+            return "0以上の金額を入力してください。"
         }
 
         guard let amount = parsedAmount else {
             return "金額の形式を確認してください。"
         }
 
-        guard amount > 0 else {
-            return "0より大きい金額を入力してください。"
+        guard amount >= 0 else {
+            return "0以上の金額を入力してください。"
         }
 
         return nil
