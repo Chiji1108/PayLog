@@ -12,6 +12,7 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(ReviewRequestPolicy.firstLaunchTimestampKey) private var firstLaunchTimestamp = 0.0
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     var body: some View {
         TabView {
@@ -42,6 +43,12 @@ struct ContentView: View {
 
             await NotificationScheduler.shared.rescheduleAll(using: modelContext)
         }
+        .fullScreenCover(isPresented: onboardingBinding) {
+            OnboardingView {
+                hasCompletedOnboarding = true
+            }
+            .interactiveDismissDisabled()
+        }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else {
                 return
@@ -51,6 +58,15 @@ struct ContentView: View {
                 await NotificationScheduler.shared.rescheduleAll(using: modelContext)
             }
         }
+    }
+
+    private var onboardingBinding: Binding<Bool> {
+        Binding(
+            get: { !hasCompletedOnboarding },
+            set: { isPresented in
+                hasCompletedOnboarding = !isPresented
+            }
+        )
     }
 }
 
