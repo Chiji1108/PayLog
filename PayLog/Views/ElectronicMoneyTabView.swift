@@ -12,6 +12,8 @@ struct ElectronicMoneyTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var electronicMoneys: [ElectronicMoney]
     @State private var showingAddSheet = false
+    @State private var hasCreatedItemInPresentedSheet = false
+    @State private var reviewRequestTrigger = 0
 
     var body: some View {
         NavigationStack {
@@ -68,10 +70,13 @@ struct ElectronicMoneyTabView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingAddSheet) {
-                ElectronicMoneyEditorView()
+            .sheet(isPresented: $showingAddSheet, onDismiss: handleAddSheetDismiss) {
+                ElectronicMoneyEditorView(electronicMoney: nil, onDelete: nil, onCreate: {
+                    hasCreatedItemInPresentedSheet = true
+                })
             }
         }
+        .reviewRequestAfterCreation(trigger: reviewRequestTrigger)
     }
 
     private func deleteActiveElectronicMoneys(offsets: IndexSet) {
@@ -104,6 +109,15 @@ struct ElectronicMoneyTabView: View {
 
     private func applySampleData() {
         SampleDataSeeder.replaceAllWithSampleData(in: modelContext)
+    }
+
+    private func handleAddSheetDismiss() {
+        guard hasCreatedItemInPresentedSheet else {
+            return
+        }
+
+        hasCreatedItemInPresentedSheet = false
+        reviewRequestTrigger += 1
     }
 }
 

@@ -15,15 +15,21 @@ struct ElectronicMoneyEditorView: View {
 
     private let electronicMoney: ElectronicMoney?
     private let onDelete: (() -> Void)?
+    private let onCreate: (() -> Void)?
     @State private var name = ""
     @State private var notes = ""
     @State private var isActive = true
     @State private var selectedCardID: PersistentIdentifier?
     @State private var deleteRequest: DeleteRequest<ElectronicMoney>?
 
-    init(electronicMoney: ElectronicMoney? = nil, onDelete: (() -> Void)? = nil) {
+    init(
+        electronicMoney: ElectronicMoney? = nil,
+        onDelete: (() -> Void)? = nil,
+        onCreate: (() -> Void)? = nil
+    ) {
         self.electronicMoney = electronicMoney
         self.onDelete = onDelete
+        self.onCreate = onCreate
         _name = State(initialValue: electronicMoney?.name ?? "")
         _notes = State(initialValue: electronicMoney?.notes ?? "")
         _isActive = State(initialValue: electronicMoney?.isActive ?? true)
@@ -89,6 +95,7 @@ struct ElectronicMoneyEditorView: View {
                                 isActive: isActive
                             )
                             modelContext.insert(electronicMoney)
+                            onCreate?()
                         }
                         dismiss()
                     }

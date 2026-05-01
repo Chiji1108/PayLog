@@ -16,6 +16,7 @@ struct CardEditorView: View {
 
     private let card: Card?
     private let onDelete: (() -> Void)?
+    private let onCreate: (() -> Void)?
     @State private var name = ""
     @State private var lastFourDigits = ""
     @State private var closingDay: Int?
@@ -28,9 +29,10 @@ struct CardEditorView: View {
     @State private var deleteRequest: DeleteRequest<Card>?
     @State private var hasAttemptedSave = false
 
-    init(card: Card? = nil, onDelete: (() -> Void)? = nil) {
+    init(card: Card? = nil, onDelete: (() -> Void)? = nil, onCreate: (() -> Void)? = nil) {
         self.card = card
         self.onDelete = onDelete
+        self.onCreate = onCreate
         _name = State(initialValue: card?.name ?? "")
         _lastFourDigits = State(initialValue: card?.lastFourDigits ?? "")
         _closingDay = State(initialValue: card?.closingDay)
@@ -166,6 +168,7 @@ struct CardEditorView: View {
                                 isActive: isActive
                             )
                             modelContext.insert(card)
+                            onCreate?()
                         }
                         try? modelContext.save()
                         Task {

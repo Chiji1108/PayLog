@@ -11,6 +11,7 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage(ReviewRequestPolicy.firstLaunchTimestampKey) private var firstLaunchTimestamp = 0.0
 
     var body: some View {
         TabView {
@@ -35,6 +36,10 @@ struct ContentView: View {
                 }
         }
         .task {
+            if firstLaunchTimestamp == 0 {
+                firstLaunchTimestamp = Date.now.timeIntervalSince1970
+            }
+
             await NotificationScheduler.shared.rescheduleAll(using: modelContext)
         }
         .onChange(of: scenePhase) { _, newPhase in

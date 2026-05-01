@@ -16,6 +16,7 @@ struct SubscriptionEditorView: View {
 
     private let subscription: SubscriptionItem?
     private let onDelete: (() -> Void)?
+    private let onCreate: (() -> Void)?
     @State private var name = ""
     @State private var amountText = ""
     @State private var billingInterval = 1
@@ -30,9 +31,14 @@ struct SubscriptionEditorView: View {
     @State private var deleteRequest: DeleteRequest<SubscriptionItem>?
     @State private var hasAttemptedSave = false
 
-    init(subscription: SubscriptionItem? = nil, onDelete: (() -> Void)? = nil) {
+    init(
+        subscription: SubscriptionItem? = nil,
+        onDelete: (() -> Void)? = nil,
+        onCreate: (() -> Void)? = nil
+    ) {
         self.subscription = subscription
         self.onDelete = onDelete
+        self.onCreate = onCreate
         _name = State(initialValue: subscription?.name ?? "")
         _amountText = State(
             initialValue: Self.editingAmountText(
@@ -216,8 +222,8 @@ struct SubscriptionEditorView: View {
                                 isActive: isActive
                             )
                             modelContext.insert(subscription)
+                            onCreate?()
                         }
-                        try? modelContext.save()
                         dismiss()
                     }
                     .disabled(isSaveDisabled)

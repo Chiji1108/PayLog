@@ -12,6 +12,8 @@ struct CardTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var cards: [Card]
     @State private var showingAddSheet = false
+    @State private var hasCreatedItemInPresentedSheet = false
+    @State private var reviewRequestTrigger = 0
 
     var body: some View {
         NavigationStack {
@@ -74,10 +76,13 @@ struct CardTabView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingAddSheet) {
-                CardEditorView()
+            .sheet(isPresented: $showingAddSheet, onDismiss: handleAddSheetDismiss) {
+                CardEditorView(card: nil, onDelete: nil, onCreate: {
+                    hasCreatedItemInPresentedSheet = true
+                })
             }
         }
+        .reviewRequestAfterCreation(trigger: reviewRequestTrigger)
     }
 
     private func deleteActiveCards(offsets: IndexSet) {
@@ -122,6 +127,15 @@ struct CardTabView: View {
             try? modelContext.save()
             await NotificationScheduler.shared.rescheduleAll(using: modelContext)
         }
+    }
+
+    private func handleAddSheetDismiss() {
+        guard hasCreatedItemInPresentedSheet else {
+            return
+        }
+
+        hasCreatedItemInPresentedSheet = false
+        reviewRequestTrigger += 1
     }
 }
 

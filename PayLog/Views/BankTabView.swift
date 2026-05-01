@@ -12,6 +12,8 @@ struct BankTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var banks: [Bank]
     @State private var showingAddSheet = false
+    @State private var hasCreatedItemInPresentedSheet = false
+    @State private var reviewRequestTrigger = 0
 
     var body: some View {
         NavigationStack {
@@ -68,10 +70,13 @@ struct BankTabView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingAddSheet) {
-                BankEditorView()
+            .sheet(isPresented: $showingAddSheet, onDismiss: handleAddSheetDismiss) {
+                BankEditorView(bank: nil, onDelete: nil, onCreate: {
+                    hasCreatedItemInPresentedSheet = true
+                })
             }
         }
+        .reviewRequestAfterCreation(trigger: reviewRequestTrigger)
     }
 
     private func deleteActiveBanks(offsets: IndexSet) {
@@ -104,6 +109,15 @@ struct BankTabView: View {
 
     private func applySampleData() {
         SampleDataSeeder.replaceAllWithSampleData(in: modelContext)
+    }
+
+    private func handleAddSheetDismiss() {
+        guard hasCreatedItemInPresentedSheet else {
+            return
+        }
+
+        hasCreatedItemInPresentedSheet = false
+        reviewRequestTrigger += 1
     }
 }
 

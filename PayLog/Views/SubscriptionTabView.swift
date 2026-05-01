@@ -13,6 +13,8 @@ struct SubscriptionTabView: View {
     @Query private var subscriptions: [SubscriptionItem]
     @State private var showingAddSheet = false
     @State private var selectedFilter: SubscriptionFilter = .all
+    @State private var hasCreatedItemInPresentedSheet = false
+    @State private var reviewRequestTrigger = 0
 
     var body: some View {
         NavigationStack {
@@ -100,8 +102,10 @@ struct SubscriptionTabView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingAddSheet) {
-                SubscriptionEditorView()
+            .sheet(isPresented: $showingAddSheet, onDismiss: handleAddSheetDismiss) {
+                SubscriptionEditorView(subscription: nil, onDelete: nil, onCreate: {
+                    hasCreatedItemInPresentedSheet = true
+                })
             }
             .onChange(of: availableFrequencies) { _, newValue in
                 if case let .frequency(frequency) = selectedFilter, !newValue.contains(frequency) {
@@ -109,6 +113,7 @@ struct SubscriptionTabView: View {
                 }
             }
         }
+        .reviewRequestAfterCreation(trigger: reviewRequestTrigger)
     }
 
     private func deleteActiveSubscriptions(offsets: IndexSet) {
@@ -152,6 +157,15 @@ struct SubscriptionTabView: View {
 
     private func applySampleData() {
         SampleDataSeeder.replaceAllWithSampleData(in: modelContext)
+    }
+
+    private func handleAddSheetDismiss() {
+        guard hasCreatedItemInPresentedSheet else {
+            return
+        }
+
+        hasCreatedItemInPresentedSheet = false
+        reviewRequestTrigger += 1
     }
 }
 
