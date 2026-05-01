@@ -84,9 +84,9 @@ struct BankDetailView: View {
             }
         }
         .sheet(isPresented: $showingEditSheet) {
-            BankEditorView(bank: bank) {
+            BankEditorView(bank: bank, onCreate: {
                 dismiss()
-            }
+            })
         }
     }
 

@@ -48,9 +48,9 @@ struct ElectronicMoneyDetailView: View {
             }
         }
         .sheet(isPresented: $showingEditSheet) {
-            ElectronicMoneyEditorView(electronicMoney: electronicMoney) {
+            ElectronicMoneyEditorView(electronicMoney: electronicMoney, onCreate: {
                 dismiss()
-            }
+            })
         }
     }
 }

@@ -89,9 +89,9 @@ struct SubscriptionDetailView: View {
             }
         }
         .sheet(isPresented: $showingEditSheet) {
-            SubscriptionEditorView(subscription: subscription) {
+            SubscriptionEditorView(subscription: subscription, onCreate: {
                 dismiss()
-            }
+            })
         }
     }
 

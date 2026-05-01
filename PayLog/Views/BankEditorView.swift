@@ -130,20 +130,12 @@ struct BankEditorView: View {
     }
 
     private var basicInformationMessage: String? {
-        guard hasAttemptedSave else {
-            if trimmedAccountNumber != nil {
-                return "口座情報を扱うため、必要に応じてiPhoneのロックやアプリごとのFace ID保護を設定しておくと安心です。"
-            }
-
-            return nil
-        }
-
-        if trimmedName.isEmpty {
+        if hasAttemptedSave, trimmedName.isEmpty {
             return "銀行名を入力してください。"
         }
 
         if trimmedAccountNumber != nil {
-            return "口座情報を扱うため、必要に応じてiPhoneのロックやアプリごとのFace ID保護を設定しておくと安心です。"
+            return "口座情報を扱うため、必要に応じてホーム画面でこのアプリを長押しして、Face IDロックを設定しておくと安心です。"
         }
 
         return nil

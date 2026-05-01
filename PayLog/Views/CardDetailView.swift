@@ -143,9 +143,9 @@ struct CardDetailView: View {
             }
         }
         .sheet(isPresented: $showingEditSheet) {
-            CardEditorView(card: card) {
+            CardEditorView(card: card, onCreate: {
                 dismiss()
-            }
+            })
         }
         .sheet(item: $selectedCalendarDraft) { draft in
             CalendarEventEditorSheet(draft: draft)
