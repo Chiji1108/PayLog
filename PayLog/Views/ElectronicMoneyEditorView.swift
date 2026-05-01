@@ -21,6 +21,7 @@ struct ElectronicMoneyEditorView: View {
     @State private var isActive = true
     @State private var selectedCardID: PersistentIdentifier?
     @State private var deleteRequest: DeleteRequest<ElectronicMoney>?
+    @State private var showingCardSheet = false
 
     init(
         electronicMoney: ElectronicMoney? = nil,
@@ -45,11 +46,20 @@ struct ElectronicMoneyEditorView: View {
                 }
 
                 Section("チャージ元カード") {
-                    Picker("カード", selection: $selectedCardID) {
-                        Text("未設定").tag(Optional<PersistentIdentifier>.none)
+                    if cards.isEmpty {
+                        RelatedItemCreationPrompt(
+                            message: "利用可能なカードがありません。",
+                            buttonTitle: "カードを追加"
+                        ) {
+                            showingCardSheet = true
+                        }
+                    } else {
+                        Picker("カード", selection: $selectedCardID) {
+                            Text("未設定").tag(Optional<PersistentIdentifier>.none)
 
-                        ForEach(cards) { card in
-                            Text(card.name).tag(Optional(card.persistentModelID))
+                            ForEach(cards) { card in
+                                Text(card.name).tag(Optional(card.persistentModelID))
+                            }
                         }
                     }
                 }
@@ -102,6 +112,9 @@ struct ElectronicMoneyEditorView: View {
                     .disabled(trimmedName.isEmpty)
                 }
             }
+            .sheet(isPresented: $showingCardSheet) {
+                CardEditorView(onCreateCard: handleCardCreated)
+            }
         }
     }
 
@@ -126,6 +139,10 @@ struct ElectronicMoneyEditorView: View {
         modelContext.delete(electronicMoney)
         onDelete?()
         dismiss()
+    }
+
+    private func handleCardCreated(_ card: Card) {
+        selectedCardID = card.persistentModelID
     }
 }
 

@@ -17,6 +17,7 @@ struct SubscriptionEditorView: View {
     private let subscription: SubscriptionItem?
     private let onDelete: (() -> Void)?
     private let onCreate: (() -> Void)?
+    private let onCreateSubscription: ((SubscriptionItem) -> Void)?
     @State private var name = ""
     @State private var amountText = ""
     @State private var billingInterval = 1
@@ -30,16 +31,22 @@ struct SubscriptionEditorView: View {
     @State private var selectedBankID: PersistentIdentifier?
     @State private var deleteRequest: DeleteRequest<SubscriptionItem>?
     @State private var hasAttemptedSave = false
+    @State private var showingCardSheet = false
+    @State private var showingBankSheet = false
 
     init(
         subscription: SubscriptionItem? = nil,
+        initialName: String? = nil,
+        initialBillingUnit: SubscriptionBillingUnit? = nil,
         onDelete: (() -> Void)? = nil,
-        onCreate: (() -> Void)? = nil
+        onCreate: (() -> Void)? = nil,
+        onCreateSubscription: ((SubscriptionItem) -> Void)? = nil
     ) {
         self.subscription = subscription
         self.onDelete = onDelete
         self.onCreate = onCreate
-        _name = State(initialValue: subscription?.name ?? "")
+        self.onCreateSubscription = onCreateSubscription
+        _name = State(initialValue: subscription?.name ?? initialName ?? "")
         _amountText = State(
             initialValue: Self.editingAmountText(
                 for: subscription?.amount,
@@ -47,7 +54,7 @@ struct SubscriptionEditorView: View {
             )
         )
         _billingInterval = State(initialValue: max(subscription?.billingInterval ?? 1, 1))
-        _billingUnit = State(initialValue: subscription?.billingUnit ?? .month)
+        _billingUnit = State(initialValue: subscription?.billingUnit ?? initialBillingUnit ?? .month)
         _currency = State(initialValue: subscription?.currency ?? .jpy)
         _billingAnchorDate = State(
             initialValue: Calendar.autoupdatingCurrent.startOfDay(for: subscription?.billingAnchorDate ?? .now)
@@ -118,8 +125,12 @@ struct SubscriptionEditorView: View {
                     switch paymentMethod {
                     case .card:
                         if cards.isEmpty {
-                            Text("利用可能なカードがありません")
-                                .foregroundStyle(.secondary)
+                            RelatedItemCreationPrompt(
+                                message: "利用可能なカードがありません。",
+                                buttonTitle: "カードを追加"
+                            ) {
+                                showingCardSheet = true
+                            }
                         } else {
                             Picker("カード", selection: $selectedCardID) {
                                 Text("未設定").tag(Optional<PersistentIdentifier>.none)
@@ -131,8 +142,12 @@ struct SubscriptionEditorView: View {
                         }
                     case .bankAccount:
                         if banks.isEmpty {
-                            Text("利用可能な銀行口座がありません")
-                                .foregroundStyle(.secondary)
+                            RelatedItemCreationPrompt(
+                                message: "利用可能な銀行口座がありません。",
+                                buttonTitle: "銀行口座を追加"
+                            ) {
+                                showingBankSheet = true
+                            }
                         } else {
                             Picker("銀行口座", selection: $selectedBankID) {
                                 Text("未設定").tag(Optional<PersistentIdentifier>.none)
@@ -223,11 +238,18 @@ struct SubscriptionEditorView: View {
                             )
                             modelContext.insert(subscription)
                             onCreate?()
+                            onCreateSubscription?(subscription)
                         }
                         dismiss()
                     }
                     .disabled(isSaveDisabled)
                 }
+            }
+            .sheet(isPresented: $showingCardSheet) {
+                CardEditorView(onCreateCard: handleCardCreated)
+            }
+            .sheet(isPresented: $showingBankSheet) {
+                BankEditorView(onCreateBank: handleBankCreated)
             }
         }
     }
@@ -317,6 +339,16 @@ struct SubscriptionEditorView: View {
         try? modelContext.save()
         onDelete?()
         dismiss()
+    }
+
+    private func handleCardCreated(_ card: Card) {
+        selectedCardID = card.persistentModelID
+        paymentMethod = .card
+    }
+
+    private func handleBankCreated(_ bank: Bank) {
+        selectedBankID = bank.persistentModelID
+        paymentMethod = .bankAccount
     }
 
     private static func editingAmountText(

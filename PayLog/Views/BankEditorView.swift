@@ -15,6 +15,7 @@ struct BankEditorView: View {
     private let bank: Bank?
     private let onDelete: (() -> Void)?
     private let onCreate: (() -> Void)?
+    private let onCreateBank: ((Bank) -> Void)?
     @State private var name = ""
     @State private var branchName = ""
     @State private var accountNumber = ""
@@ -23,10 +24,16 @@ struct BankEditorView: View {
     @State private var deleteRequest: DeleteRequest<Bank>?
     @State private var hasAttemptedSave = false
 
-    init(bank: Bank? = nil, onDelete: (() -> Void)? = nil, onCreate: (() -> Void)? = nil) {
+    init(
+        bank: Bank? = nil,
+        onDelete: (() -> Void)? = nil,
+        onCreate: (() -> Void)? = nil,
+        onCreateBank: ((Bank) -> Void)? = nil
+    ) {
         self.bank = bank
         self.onDelete = onDelete
         self.onCreate = onCreate
+        self.onCreateBank = onCreateBank
         _name = State(initialValue: bank?.name ?? "")
         _branchName = State(initialValue: bank?.branchName ?? "")
         _accountNumber = State(initialValue: bank?.accountNumber ?? "")
@@ -104,6 +111,7 @@ struct BankEditorView: View {
                             )
                             modelContext.insert(bank)
                             onCreate?()
+                            onCreateBank?(bank)
                         }
                         dismiss()
                     }
