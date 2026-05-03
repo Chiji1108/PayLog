@@ -105,14 +105,14 @@ struct SubscriptionEditorView: View {
                 }
 
                 Section {
-                    Stepper(value: $billingInterval, in: 1...24) {
-                        LabeledContent("間隔", value: billingFrequency.intervalDescription)
-                    }
-
                     Picker("単位", selection: $billingUnit) {
                         ForEach(SubscriptionBillingUnit.allCases) { unit in
                             Text(unit.label).tag(unit)
                         }
+                    }
+
+                    Stepper(value: $billingInterval, in: 1...24) {
+                        Text(billingFrequency.editorIntervalDescription)
                     }
 
                     DatePicker("基準日", selection: $billingAnchorDate, displayedComponents: .date)
@@ -340,13 +340,13 @@ struct SubscriptionEditorView: View {
     }
 
     private var billingScheduleFooter: String {
-        switch billingUnit {
+        return switch billingUnit {
         case .week:
-            "選んだ基準日を起点に、同じ曜日で繰り返します。"
+            "基準日の曜日で繰り返します。"
         case .month:
-            "選んだ基準日を起点に、同じ日付で繰り返します。存在しない日は月末に丸めます。"
+            "基準日の日付で繰り返します。存在しない日は月末に丸めます。"
         case .year:
-            "選んだ基準日を起点に、同じ月日で繰り返します。2月29日は平年では2月28日扱いです。"
+            "基準日の月日で繰り返します。2月29日は平年では2月28日扱いです。"
         }
     }
 

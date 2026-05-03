@@ -159,6 +159,17 @@ struct SubscriptionBillingFrequency: Hashable, Identifiable, Comparable {
         "\(interval)\(unit.durationLabel)"
     }
 
+    var editorIntervalDescription: String {
+        switch unit {
+        case .week:
+            interval == 1 ? "毎週" : "\(interval)週間ごと"
+        case .month:
+            interval == 1 ? "毎月" : "\(interval)ヶ月ごと"
+        case .year:
+            interval == 1 ? "毎年" : "\(interval)年ごと"
+        }
+    }
+
     func formattedAmount(_ amount: Decimal, currency: SubscriptionCurrency) -> String {
         let amountText = currency.formattedAmount(amount)
         let suffix = interval == 1 ? unit.amountSuffix : "\(interval)\(unit.durationLabel)"
