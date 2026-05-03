@@ -26,14 +26,11 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 28) {
                 Spacer(minLength: 0)
 
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text("ようこそPayLogへ")
                         .font(.largeTitle.bold())
-
-                    Text("支払いにまつわる情報を、シンプルにまとめて管理できます。")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
                 }
+                .padding(.bottom, 24)
 
                 VStack(spacing: 16) {
                     FeatureCard(
@@ -45,7 +42,7 @@ struct OnboardingView: View {
                     FeatureCard(
                         systemImage: "lock.shield",
                         title: "データ収集なし",
-                        message: "PayLogは、ユーザーのデータを外部サーバーへ送信しません。入力した情報は端末内とiCloud同期で管理されます。"
+                        message: "入力したデータは外部サーバーへ送信されません。端末内とiCloud同期でのみ管理されます。"
                     )
 
                     FeatureCard(
