@@ -74,9 +74,6 @@ struct ElectronicMoneyTabView: View {
                 }
             }
             .navigationTitle("電子マネー")
-            .task {
-                normalizeSortOrdersIfNeeded()
-            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     EditButton()
@@ -109,40 +106,36 @@ struct ElectronicMoneyTabView: View {
     }
 
     private func deleteActiveElectronicMoneys(offsets: IndexSet) {
-        let remainingElectronicMoneys = activeElectronicMoneys.enumerated()
-            .filter { !offsets.contains($0.offset) }
-            .map(\.element)
-
-        for index in offsets {
-            modelContext.delete(activeElectronicMoneys[index])
-        }
-
-        remainingElectronicMoneys.normalizeSortOrders()
-        saveModelContext()
+        deleteElectronicMoneys(offsets: offsets, from: activeElectronicMoneys)
     }
 
     private func deleteInactiveElectronicMoneys(offsets: IndexSet) {
-        let remainingElectronicMoneys = inactiveElectronicMoneys.enumerated()
+        deleteElectronicMoneys(offsets: offsets, from: inactiveElectronicMoneys)
+    }
+
+    private func moveActiveElectronicMoneys(from source: IndexSet, to destination: Int) {
+        moveElectronicMoneys(from: source, to: destination, in: activeElectronicMoneys)
+    }
+
+    private func moveInactiveElectronicMoneys(from source: IndexSet, to destination: Int) {
+        moveElectronicMoneys(from: source, to: destination, in: inactiveElectronicMoneys)
+    }
+
+    private func deleteElectronicMoneys(offsets: IndexSet, from electronicMoneys: [ElectronicMoney]) {
+        let remainingElectronicMoneys = electronicMoneys.enumerated()
             .filter { !offsets.contains($0.offset) }
             .map(\.element)
 
         for index in offsets {
-            modelContext.delete(inactiveElectronicMoneys[index])
+            modelContext.delete(electronicMoneys[index])
         }
 
         remainingElectronicMoneys.normalizeSortOrders()
         saveModelContext()
     }
 
-    private func moveActiveElectronicMoneys(from source: IndexSet, to destination: Int) {
-        var reorderedElectronicMoneys = activeElectronicMoneys
-        reorderedElectronicMoneys.move(fromOffsets: source, toOffset: destination)
-        reorderedElectronicMoneys.normalizeSortOrders()
-        saveModelContext()
-    }
-
-    private func moveInactiveElectronicMoneys(from source: IndexSet, to destination: Int) {
-        var reorderedElectronicMoneys = inactiveElectronicMoneys
+    private func moveElectronicMoneys(from source: IndexSet, to destination: Int, in electronicMoneys: [ElectronicMoney]) {
+        var reorderedElectronicMoneys = electronicMoneys
         reorderedElectronicMoneys.move(fromOffsets: source, toOffset: destination)
         reorderedElectronicMoneys.normalizeSortOrders()
         saveModelContext()
@@ -175,17 +168,6 @@ struct ElectronicMoneyTabView: View {
 
         hasCreatedItemInPresentedSheet = false
         reviewRequestTrigger += 1
-    }
-
-    private func normalizeSortOrdersIfNeeded() {
-        let didChange = activeElectronicMoneys.normalizeSortOrders()
-            || inactiveElectronicMoneys.normalizeSortOrders()
-
-        guard didChange else {
-            return
-        }
-
-        saveModelContext()
     }
 
     private func saveModelContext() {

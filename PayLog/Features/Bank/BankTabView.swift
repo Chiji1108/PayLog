@@ -74,9 +74,6 @@ struct BankTabView: View {
                 }
             }
             .navigationTitle("銀行口座")
-            .task {
-                normalizeSortOrdersIfNeeded()
-            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     EditButton()
@@ -109,40 +106,36 @@ struct BankTabView: View {
     }
 
     private func deleteActiveBanks(offsets: IndexSet) {
-        let remainingBanks = activeBanks.enumerated()
-            .filter { !offsets.contains($0.offset) }
-            .map(\.element)
-
-        for index in offsets {
-            modelContext.delete(activeBanks[index])
-        }
-
-        remainingBanks.normalizeSortOrders()
-        saveModelContext()
+        deleteBanks(offsets: offsets, from: activeBanks)
     }
 
     private func deleteInactiveBanks(offsets: IndexSet) {
-        let remainingBanks = inactiveBanks.enumerated()
+        deleteBanks(offsets: offsets, from: inactiveBanks)
+    }
+
+    private func moveActiveBanks(from source: IndexSet, to destination: Int) {
+        moveBanks(from: source, to: destination, in: activeBanks)
+    }
+
+    private func moveInactiveBanks(from source: IndexSet, to destination: Int) {
+        moveBanks(from: source, to: destination, in: inactiveBanks)
+    }
+
+    private func deleteBanks(offsets: IndexSet, from banks: [Bank]) {
+        let remainingBanks = banks.enumerated()
             .filter { !offsets.contains($0.offset) }
             .map(\.element)
 
         for index in offsets {
-            modelContext.delete(inactiveBanks[index])
+            modelContext.delete(banks[index])
         }
 
         remainingBanks.normalizeSortOrders()
         saveModelContext()
     }
 
-    private func moveActiveBanks(from source: IndexSet, to destination: Int) {
-        var reorderedBanks = activeBanks
-        reorderedBanks.move(fromOffsets: source, toOffset: destination)
-        reorderedBanks.normalizeSortOrders()
-        saveModelContext()
-    }
-
-    private func moveInactiveBanks(from source: IndexSet, to destination: Int) {
-        var reorderedBanks = inactiveBanks
+    private func moveBanks(from source: IndexSet, to destination: Int, in banks: [Bank]) {
+        var reorderedBanks = banks
         reorderedBanks.move(fromOffsets: source, toOffset: destination)
         reorderedBanks.normalizeSortOrders()
         saveModelContext()
@@ -175,16 +168,6 @@ struct BankTabView: View {
 
         hasCreatedItemInPresentedSheet = false
         reviewRequestTrigger += 1
-    }
-
-    private func normalizeSortOrdersIfNeeded() {
-        let didChange = activeBanks.normalizeSortOrders() || inactiveBanks.normalizeSortOrders()
-
-        guard didChange else {
-            return
-        }
-
-        saveModelContext()
     }
 
     private func saveModelContext() {

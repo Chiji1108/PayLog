@@ -27,71 +27,8 @@ struct SubscriptionTabView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if subscriptions.isEmpty {
-                    SampleDataContentUnavailableView(
-                        title: "固定費がまだありません",
-                        systemImage: "repeat.circle",
-                        description: "カードや銀行口座を登録しておくと、スムーズに追加できます。",
-                        shouldConfirmReplacement: shouldConfirmSampleDataReplacement,
-                        applySampleData: applySampleData
-                    )
-                } else {
-                    List {
-                        if filteredSubscriptions.isEmpty {
-                            Section {
-                                ContentUnavailableView(
-                                    selectedFilter.emptyTitle,
-                                    systemImage: "repeat.circle",
-                                    description: Text(selectedFilter.emptyDescription)
-                                )
-                            }
-                        } else {
-                            if !activeSubscriptions.isEmpty {
-                                Section {
-                                    if allowsManualReordering {
-                                        ForEach(activeSubscriptions) { subscription in
-                                            subscriptionNavigationLink(for: subscription)
-                                        }
-                                        .onDelete(perform: deleteActiveSubscriptions)
-                                        .onMove(perform: moveActiveSubscriptions)
-                                    } else {
-                                        ForEach(activeSubscriptions) { subscription in
-                                            subscriptionNavigationLink(for: subscription)
-                                        }
-                                        .onDelete(perform: deleteActiveSubscriptions)
-                                    }
-                                } header: {
-                                    ActiveStatusSectionHeader(isActive: true)
-                                }
-                            }
-
-                            if !inactiveSubscriptions.isEmpty {
-                                Section {
-                                    if allowsManualReordering {
-                                        ForEach(inactiveSubscriptions) { subscription in
-                                            subscriptionNavigationLink(for: subscription)
-                                        }
-                                        .onDelete(perform: deleteInactiveSubscriptions)
-                                        .onMove(perform: moveInactiveSubscriptions)
-                                    } else {
-                                        ForEach(inactiveSubscriptions) { subscription in
-                                            subscriptionNavigationLink(for: subscription)
-                                        }
-                                        .onDelete(perform: deleteInactiveSubscriptions)
-                                    }
-                                } header: {
-                                    ActiveStatusSectionHeader(isActive: false)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            content
             .navigationTitle("固定費")
-            .task {
-                normalizeSortOrdersIfNeeded()
-            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     EditButton()
@@ -136,53 +73,141 @@ struct SubscriptionTabView: View {
                 }
             }
             .onChange(of: subscriptions.count) { oldValue, newValue in
-                guard oldValue == 0, newValue > 0 else {
-                    return
-                }
-
-                Task {
-                    await SwipeToDeleteTip.listReceivedFirstItem.donate()
-                }
+                handleSubscriptionCountChange(from: oldValue, to: newValue)
             }
         }
         .reviewRequestAfterCreation(trigger: reviewRequestTrigger)
     }
 
-    private func deleteActiveSubscriptions(offsets: IndexSet) {
-        let remainingSubscriptions = activeSubscriptions.enumerated()
-            .filter { !offsets.contains($0.offset) }
-            .map(\.element)
-
-        for index in offsets {
-            modelContext.delete(activeSubscriptions[index])
+    @ViewBuilder
+    private var content: some View {
+        if subscriptions.isEmpty {
+            SampleDataContentUnavailableView(
+                title: "固定費がまだありません",
+                systemImage: "repeat.circle",
+                description: "カードや銀行口座を登録しておくと、スムーズに追加できます。",
+                shouldConfirmReplacement: shouldConfirmSampleDataReplacement,
+                applySampleData: applySampleData
+            )
+        } else {
+            subscriptionList
         }
+    }
 
-        remainingSubscriptions.normalizeSortOrders()
-        saveModelContext()
+    private var subscriptionList: some View {
+        List {
+            if filteredSubscriptions.isEmpty {
+                filteredEmptySection
+            } else {
+                if selectedFilter != .all {
+                    filteredSummaryListSection
+                }
+
+                activeSubscriptionSection
+                inactiveSubscriptionSection
+            }
+        }
+    }
+
+    private var filteredEmptySection: some View {
+        Section {
+            ContentUnavailableView(
+                selectedFilter.emptyTitle,
+                systemImage: "repeat.circle",
+                description: Text(selectedFilter.emptyDescription)
+            )
+        }
+    }
+
+    private var filteredSummaryListSection: some View {
+        Section {
+            filteredSummarySection
+        } header: {
+            if hasMixedCurrenciesInFilteredSummary {
+                Text("合計")
+            }
+        } footer: {
+            if let footer = filteredSummaryFooterText {
+                Text(footer)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var activeSubscriptionSection: some View {
+        if !activeSubscriptions.isEmpty {
+            Section {
+                if allowsManualReordering {
+                    ForEach(activeSubscriptions) { subscription in
+                        subscriptionNavigationLink(for: subscription)
+                    }
+                    .onDelete(perform: deleteActiveSubscriptions)
+                    .onMove(perform: moveActiveSubscriptions)
+                } else {
+                    ForEach(activeSubscriptions) { subscription in
+                        subscriptionNavigationLink(for: subscription)
+                    }
+                    .onDelete(perform: deleteActiveSubscriptions)
+                }
+            } header: {
+                ActiveStatusSectionHeader(isActive: true)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var inactiveSubscriptionSection: some View {
+        if !inactiveSubscriptions.isEmpty {
+            Section {
+                if allowsManualReordering {
+                    ForEach(inactiveSubscriptions) { subscription in
+                        subscriptionNavigationLink(for: subscription)
+                    }
+                    .onDelete(perform: deleteInactiveSubscriptions)
+                    .onMove(perform: moveInactiveSubscriptions)
+                } else {
+                    ForEach(inactiveSubscriptions) { subscription in
+                        subscriptionNavigationLink(for: subscription)
+                    }
+                    .onDelete(perform: deleteInactiveSubscriptions)
+                }
+            } header: {
+                ActiveStatusSectionHeader(isActive: false)
+            }
+        }
+    }
+
+    private func deleteActiveSubscriptions(offsets: IndexSet) {
+        deleteSubscriptions(offsets: offsets, from: activeSubscriptions)
     }
 
     private func deleteInactiveSubscriptions(offsets: IndexSet) {
-        let remainingSubscriptions = inactiveSubscriptions.enumerated()
+        deleteSubscriptions(offsets: offsets, from: inactiveSubscriptions)
+    }
+
+    private func moveActiveSubscriptions(from source: IndexSet, to destination: Int) {
+        moveSubscriptions(from: source, to: destination, in: activeSubscriptions)
+    }
+
+    private func moveInactiveSubscriptions(from source: IndexSet, to destination: Int) {
+        moveSubscriptions(from: source, to: destination, in: inactiveSubscriptions)
+    }
+
+    private func deleteSubscriptions(offsets: IndexSet, from subscriptions: [SubscriptionItem]) {
+        let remainingSubscriptions = subscriptions.enumerated()
             .filter { !offsets.contains($0.offset) }
             .map(\.element)
 
         for index in offsets {
-            modelContext.delete(inactiveSubscriptions[index])
+            modelContext.delete(subscriptions[index])
         }
 
         remainingSubscriptions.normalizeSortOrders()
         saveModelContext()
     }
 
-    private func moveActiveSubscriptions(from source: IndexSet, to destination: Int) {
-        var reorderedSubscriptions = activeSubscriptions
-        reorderedSubscriptions.move(fromOffsets: source, toOffset: destination)
-        reorderedSubscriptions.normalizeSortOrders()
-        saveModelContext()
-    }
-
-    private func moveInactiveSubscriptions(from source: IndexSet, to destination: Int) {
-        var reorderedSubscriptions = inactiveSubscriptions
+    private func moveSubscriptions(from source: IndexSet, to destination: Int, in subscriptions: [SubscriptionItem]) {
+        var reorderedSubscriptions = subscriptions
         reorderedSubscriptions.move(fromOffsets: source, toOffset: destination)
         reorderedSubscriptions.normalizeSortOrders()
         saveModelContext()
@@ -203,6 +228,24 @@ struct SubscriptionTabView: View {
         Array(Set(subscriptions.map(\.billingFrequency))).sorted()
     }
 
+    private var filteredCurrencyTotals: [FilteredCurrencyTotal] {
+        let totalsByCurrency = activeSubscriptions.reduce(into: [SubscriptionCurrency: Decimal]()) { partialResult, subscription in
+            partialResult[subscription.currency, default: .zero] += subscription.amount
+        }
+
+        return SubscriptionCurrency.allCases.compactMap { currency in
+            guard let amount = totalsByCurrency[currency] else {
+                return nil
+            }
+
+            return FilteredCurrencyTotal(currency: currency, amount: amount)
+        }
+    }
+
+    private var hasMixedCurrenciesInFilteredSummary: Bool {
+        filteredCurrencyTotals.count > 1
+    }
+
     private var activeSubscriptions: [SubscriptionItem] {
         filteredSubscriptions.filter(\.isActive)
     }
@@ -213,6 +256,18 @@ struct SubscriptionTabView: View {
 
     private var allowsManualReordering: Bool {
         selectedFilter == .all
+    }
+
+    private var filteredSummaryFooterText: String? {
+        guard selectedFilter != .all else {
+            return nil
+        }
+
+        if activeSubscriptions.isEmpty {
+            return "利用中の固定費を集計します。"
+        }
+
+        return "アクティブな固定費 \(activeSubscriptions.count) 件を集計しています。"
     }
 
     private var firstFilteredSubscriptionID: PersistentIdentifier? {
@@ -227,6 +282,38 @@ struct SubscriptionTabView: View {
             SubscriptionRow(subscription: subscription)
         }
         .swipeToDeleteTip(isPresented: subscription.persistentModelID == firstFilteredSubscriptionID)
+    }
+
+    @ViewBuilder
+    private var filteredSummarySection: some View {
+        if filteredCurrencyTotals.isEmpty {
+            Text("集計できる利用中の固定費はありません")
+                .foregroundStyle(.secondary)
+        } else if !hasMixedCurrenciesInFilteredSummary, let total = filteredCurrencyTotals.first {
+            LabeledContent("合計") {
+                Text(filteredSummaryValueText(for: total))
+                    .fontWeight(.semibold)
+                    .monospacedDigit()
+            }
+        } else {
+            ForEach(filteredCurrencyTotals) { total in
+                LabeledContent(total.currency.code) {
+                    Text(filteredSummaryValueText(for: total))
+                        .fontWeight(.semibold)
+                        .monospacedDigit()
+                }
+            }
+        }
+    }
+
+    private func filteredSummaryValueText(for total: FilteredCurrencyTotal) -> String {
+        let amountText = total.currency.formattedAmount(total.amount)
+
+        guard let frequency = selectedFilter.frequency else {
+            return amountText
+        }
+
+        return "\(amountText) / \(frequency.intervalDescription)"
     }
 
     private func shouldConfirmSampleDataReplacement() -> Bool {
@@ -246,15 +333,18 @@ struct SubscriptionTabView: View {
         reviewRequestTrigger += 1
     }
 
-    private func normalizeSortOrdersIfNeeded() {
-        let didChange = activeSubscriptions.normalizeSortOrders()
-            || inactiveSubscriptions.normalizeSortOrders()
-
-        guard didChange else {
+    private func handleSubscriptionCountChange(from oldValue: Int, to newValue: Int) {
+        guard oldValue == 0, newValue > 0 else {
             return
         }
 
-        saveModelContext()
+        Task {
+            await donateSwipeTip()
+        }
+    }
+
+    private func donateSwipeTip() async {
+        await SwipeToDeleteTip.listReceivedFirstItem.donate()
     }
 
     private func saveModelContext() {
@@ -325,6 +415,13 @@ private struct SubscriptionRow: View {
             }
         }
     }
+}
+
+private struct FilteredCurrencyTotal: Identifiable {
+    let currency: SubscriptionCurrency
+    let amount: Decimal
+
+    var id: SubscriptionCurrency { currency }
 }
 
 #Preview {

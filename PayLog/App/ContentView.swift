@@ -37,6 +37,10 @@ struct ContentView: View {
                 }
         }
         .task {
+            guard !ProcessInfo.isRunningForXcodePreviews else {
+                return
+            }
+
             if firstLaunchTimestamp == 0 {
                 firstLaunchTimestamp = Date.now.timeIntervalSince1970
             }
@@ -54,6 +58,10 @@ struct ContentView: View {
                 return
             }
 
+            guard !ProcessInfo.isRunningForXcodePreviews else {
+                return
+            }
+
             Task {
                 await NotificationScheduler.shared.rescheduleAll(using: modelContext)
             }
@@ -62,7 +70,7 @@ struct ContentView: View {
 
     private var onboardingBinding: Binding<Bool> {
         Binding(
-            get: { !hasCompletedOnboarding },
+            get: { !hasCompletedOnboarding && !ProcessInfo.isRunningForXcodePreviews },
             set: { isPresented in
                 hasCompletedOnboarding = !isPresented
             }

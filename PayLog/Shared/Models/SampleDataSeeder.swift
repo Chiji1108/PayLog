@@ -187,6 +187,14 @@ enum SampleDataSeeder {
         visa.annualFeeSubscription = oliveAnnualFee
         master.annualFeeSubscription = mufgAnnualFee
 
+        [mitsui, rakutenBank].normalizeSortOrders()
+        [mufg].normalizeSortOrders()
+        [visa, rakuten].normalizeSortOrders()
+        [master].normalizeSortOrders()
+        [suica, payPay].normalizeSortOrders()
+        [netflix, petTrimming, fixedAssetTax, chatGPTPlus, oliveAnnualFee].normalizeSortOrders()
+        [spotify, youtubePremium, mufgAnnualFee].normalizeSortOrders()
+
         context.insert(mitsui)
         context.insert(mufg)
         context.insert(rakutenBank)
@@ -297,6 +305,11 @@ enum SampleDataSeeder {
         )
 
         visa.annualFeeSubscription = oliveAnnualFee
+
+        [mitsui, mufg].normalizeSortOrders()
+        [visa, master].normalizeSortOrders()
+        [suica, payPay].normalizeSortOrders()
+        [netflix, oliveAnnualFee, chatGPTPlus].normalizeSortOrders()
 
         context.insert(mitsui)
         context.insert(mufg)

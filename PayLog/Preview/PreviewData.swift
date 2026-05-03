@@ -47,3 +47,11 @@ extension PreviewTrait where T == Preview.ViewTraits {
         .modifier(PreviewSampleData())
     }
 }
+
+extension ProcessInfo {
+    static var isRunningForXcodePreviews: Bool {
+        let environment = processInfo.environment
+        return environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+            || environment["XCODE_RUNNING_FOR_PLAYGROUNDS"] == "1"
+    }
+}

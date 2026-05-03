@@ -74,9 +74,6 @@ struct CardTabView: View {
                 }
             }
             .navigationTitle("カード")
-            .task {
-                normalizeSortOrdersIfNeeded()
-            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     EditButton()
@@ -115,42 +112,38 @@ struct CardTabView: View {
     }
 
     private func deleteActiveCards(offsets: IndexSet) {
-        let remainingCards = activeCards.enumerated()
-            .filter { !offsets.contains($0.offset) }
-            .map(\.element)
-
-        for index in offsets {
-            modelContext.delete(activeCards[index])
-        }
-
-        remainingCards.normalizeSortOrders()
-        saveModelContext()
+        deleteCards(offsets: offsets, from: activeCards)
         rescheduleNotifications()
     }
 
     private func deleteInactiveCards(offsets: IndexSet) {
-        let remainingCards = inactiveCards.enumerated()
-            .filter { !offsets.contains($0.offset) }
-            .map(\.element)
-
-        for index in offsets {
-            modelContext.delete(inactiveCards[index])
-        }
-
-        remainingCards.normalizeSortOrders()
-        saveModelContext()
+        deleteCards(offsets: offsets, from: inactiveCards)
         rescheduleNotifications()
     }
 
     private func moveActiveCards(from source: IndexSet, to destination: Int) {
-        var reorderedCards = activeCards
-        reorderedCards.move(fromOffsets: source, toOffset: destination)
-        reorderedCards.normalizeSortOrders()
-        saveModelContext()
+        moveCards(from: source, to: destination, in: activeCards)
     }
 
     private func moveInactiveCards(from source: IndexSet, to destination: Int) {
-        var reorderedCards = inactiveCards
+        moveCards(from: source, to: destination, in: inactiveCards)
+    }
+
+    private func deleteCards(offsets: IndexSet, from cards: [Card]) {
+        let remainingCards = cards.enumerated()
+            .filter { !offsets.contains($0.offset) }
+            .map(\.element)
+
+        for index in offsets {
+            modelContext.delete(cards[index])
+        }
+
+        remainingCards.normalizeSortOrders()
+        saveModelContext()
+    }
+
+    private func moveCards(from source: IndexSet, to destination: Int, in cards: [Card]) {
+        var reorderedCards = cards
         reorderedCards.move(fromOffsets: source, toOffset: destination)
         reorderedCards.normalizeSortOrders()
         saveModelContext()
@@ -191,16 +184,6 @@ struct CardTabView: View {
 
         hasCreatedItemInPresentedSheet = false
         reviewRequestTrigger += 1
-    }
-
-    private func normalizeSortOrdersIfNeeded() {
-        let didChange = activeCards.normalizeSortOrders() || inactiveCards.normalizeSortOrders()
-
-        guard didChange else {
-            return
-        }
-
-        saveModelContext()
     }
 
     private func saveModelContext() {
