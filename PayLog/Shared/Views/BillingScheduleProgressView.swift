@@ -8,37 +8,40 @@
 import SwiftUI
 
 struct BillingScheduleProgressView: View {
+    @Environment(\.editMode) private var editMode
     let scheduleLabel: String
     let countdownLabel: String
     let status: BillingScheduleStatus?
     let isActive: Bool
 
     var body: some View {
-        if let status {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    HStack(spacing: 6) {
-                        Image(systemName: "repeat")
-                        Text(status.nextDate.formatted(.dateTime.year().month(.defaultDigits).day(.defaultDigits).weekday(.abbreviated)))
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: true, vertical: false)
-
-                    Spacer()
-
-                    Text("\(countdownLabel)まであと\(status.daysUntilNext)日")
-                        .font(.subheadline.weight(.medium))
+        if editMode?.wrappedValue != .active {
+            if let status {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        HStack(spacing: 6) {
+                            Image(systemName: "repeat")
+                            Text(status.nextDate.formatted(.dateTime.year().month(.defaultDigits).day(.defaultDigits).weekday(.abbreviated)))
+                        }
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: true, vertical: false)
+                        
+                        Spacer()
+                        
+                        Text("\(countdownLabel)まであと\(status.daysUntilNext)日")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+                    
+                    ProgressView(value: status.progress)
+                        .tint(isActive ? .accentColor : .secondary)
                 }
-
-                ProgressView(value: status.progress)
-                    .tint(isActive ? .accentColor : .secondary)
-            }
-            .padding(.vertical, 4)
-        } else {
-            LabeledContent(scheduleLabel) {
-                Text("未設定")
+                .padding(.vertical, 4)
+            } else {
+                LabeledContent(scheduleLabel) {
+                    Text("未設定")
+                }
             }
         }
     }
