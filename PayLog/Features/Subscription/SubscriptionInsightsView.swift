@@ -121,7 +121,7 @@ struct SubscriptionInsightsView: View {
                 }
             }
         }
-        .navigationTitle("固定費分析")
+        .navigationTitle("固定費サマリー")
     }
 
     private var activeSubscriptions: [SubscriptionItem] {
