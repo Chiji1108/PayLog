@@ -80,10 +80,12 @@ struct ElectronicMoneyTabView: View {
                 }
 
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button {
-                        showingAddSheet = true
-                    } label: {
-                        Label("電子マネーを追加", systemImage: "plus")
+                    EditModeDisabledToolbarContent {
+                        Button {
+                            showingAddSheet = true
+                        } label: {
+                            Label("電子マネーを追加", systemImage: "plus")
+                        }
                     }
                 }
             }

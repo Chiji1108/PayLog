@@ -36,29 +36,31 @@ struct SubscriptionTabView: View {
                 }
 
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    Menu {
-                        Picker("請求サイクル", selection: $selectedFilter) {
-                            Text("すべて").tag(SubscriptionFilter.all)
+                    EditModeDisabledToolbarContent {
+                        Menu {
+                            Picker("請求サイクル", selection: $selectedFilter) {
+                                Text("すべて").tag(SubscriptionFilter.all)
 
-                            ForEach(availableFrequencies) { frequency in
-                                Text(frequency.filterLabel).tag(SubscriptionFilter.frequency(frequency))
+                                ForEach(availableFrequencies) { frequency in
+                                    Text(frequency.filterLabel).tag(SubscriptionFilter.frequency(frequency))
+                                }
                             }
+                        } label: {
+                            Image(systemName: "line.3.horizontal.decrease")
                         }
-                    } label: {
-                        Image(systemName: "line.3.horizontal.decrease")
-                    }
-                    .accessibilityLabel("請求サイクルで絞り込む")
+                        .accessibilityLabel("請求サイクルで絞り込む")
 
-                    NavigationLink {
-                        SubscriptionInsightsView()
-                    } label: {
-                        Label("分析を見る", systemImage: "chart.bar.xaxis")
-                    }
+                        NavigationLink {
+                            SubscriptionInsightsView()
+                        } label: {
+                            Label("分析を見る", systemImage: "chart.bar.xaxis")
+                        }
 
-                    Button {
-                        showingAddSheet = true
-                    } label: {
-                        Label("固定費を追加", systemImage: "plus")
+                        Button {
+                            showingAddSheet = true
+                        } label: {
+                            Label("固定費を追加", systemImage: "plus")
+                        }
                     }
                 }
             }

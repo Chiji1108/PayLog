@@ -80,16 +80,18 @@ struct CardTabView: View {
                 }
 
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    NavigationLink {
-                        CardNotificationSettingsView()
-                    } label: {
-                        Label("通知設定", systemImage: "bell")
-                    }
+                    EditModeDisabledToolbarContent {
+                        NavigationLink {
+                            CardNotificationSettingsView()
+                        } label: {
+                            Label("通知設定", systemImage: "bell")
+                        }
 
-                    Button {
-                        showingAddSheet = true
-                    } label: {
-                        Label("カードを追加", systemImage: "plus")
+                        Button {
+                            showingAddSheet = true
+                        } label: {
+                            Label("カードを追加", systemImage: "plus")
+                        }
                     }
                 }
             }

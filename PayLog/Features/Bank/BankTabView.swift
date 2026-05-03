@@ -80,10 +80,12 @@ struct BankTabView: View {
                 }
 
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button {
-                        showingAddSheet = true
-                    } label: {
-                        Label("銀行口座を追加", systemImage: "plus")
+                    EditModeDisabledToolbarContent {
+                        Button {
+                            showingAddSheet = true
+                        } label: {
+                            Label("銀行口座を追加", systemImage: "plus")
+                        }
                     }
                 }
             }
