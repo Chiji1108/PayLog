@@ -11,11 +11,19 @@ import TipKit
 
 struct SubscriptionTabView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var subscriptions: [SubscriptionItem]
+    @Query(
+        sort: [
+            SortDescriptor(\SubscriptionItem.sortOrder),
+            SortDescriptor(\SubscriptionItem.createdAt, order: .reverse),
+            SortDescriptor(\SubscriptionItem.name)
+        ]
+    ) private var subscriptions: [SubscriptionItem]
     @State private var showingAddSheet = false
     @State private var selectedFilter: SubscriptionFilter = .all
     @State private var hasCreatedItemInPresentedSheet = false
     @State private var reviewRequestTrigger = 0
+
+    init() {}
 
     var body: some View {
         NavigationStack {
@@ -41,15 +49,18 @@ struct SubscriptionTabView: View {
                         } else {
                             if !activeSubscriptions.isEmpty {
                                 Section {
-                                    ForEach(activeSubscriptions) { subscription in
-                                        NavigationLink {
-                                            SubscriptionDetailView(subscription: subscription)
-                                        } label: {
-                                            SubscriptionRow(subscription: subscription)
+                                    if allowsManualReordering {
+                                        ForEach(activeSubscriptions) { subscription in
+                                            subscriptionNavigationLink(for: subscription)
                                         }
-                                        .swipeToDeleteTip(isPresented: subscription.id == filteredSubscriptions.first?.id)
+                                        .onDelete(perform: deleteActiveSubscriptions)
+                                        .onMove(perform: moveActiveSubscriptions)
+                                    } else {
+                                        ForEach(activeSubscriptions) { subscription in
+                                            subscriptionNavigationLink(for: subscription)
+                                        }
+                                        .onDelete(perform: deleteActiveSubscriptions)
                                     }
-                                    .onDelete(perform: deleteActiveSubscriptions)
                                 } header: {
                                     ActiveStatusSectionHeader(isActive: true)
                                 }
@@ -57,15 +68,18 @@ struct SubscriptionTabView: View {
 
                             if !inactiveSubscriptions.isEmpty {
                                 Section {
-                                    ForEach(inactiveSubscriptions) { subscription in
-                                        NavigationLink {
-                                            SubscriptionDetailView(subscription: subscription)
-                                        } label: {
-                                            SubscriptionRow(subscription: subscription)
+                                    if allowsManualReordering {
+                                        ForEach(inactiveSubscriptions) { subscription in
+                                            subscriptionNavigationLink(for: subscription)
                                         }
-                                        .swipeToDeleteTip(isPresented: subscription.id == filteredSubscriptions.first?.id)
+                                        .onDelete(perform: deleteInactiveSubscriptions)
+                                        .onMove(perform: moveInactiveSubscriptions)
+                                    } else {
+                                        ForEach(inactiveSubscriptions) { subscription in
+                                            subscriptionNavigationLink(for: subscription)
+                                        }
+                                        .onDelete(perform: deleteInactiveSubscriptions)
                                     }
-                                    .onDelete(perform: deleteInactiveSubscriptions)
                                 } header: {
                                     ActiveStatusSectionHeader(isActive: false)
                                 }
@@ -75,8 +89,16 @@ struct SubscriptionTabView: View {
                 }
             }
             .navigationTitle("固定費")
+            .task {
+                normalizeSortOrdersIfNeeded()
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
+                    EditButton()
+                        .disabled(!allowsManualReordering)
+                }
+
+                ToolbarItemGroup(placement: .topBarTrailing) {
                     Menu {
                         Picker("請求サイクル", selection: $selectedFilter) {
                             Text("すべて").tag(SubscriptionFilter.all)
@@ -89,9 +111,7 @@ struct SubscriptionTabView: View {
                         Image(systemName: "line.3.horizontal.decrease")
                     }
                     .accessibilityLabel("請求サイクルで絞り込む")
-                }
 
-                ToolbarItemGroup(placement: .topBarTrailing) {
                     NavigationLink {
                         SubscriptionInsightsView()
                     } label: {
@@ -129,15 +149,43 @@ struct SubscriptionTabView: View {
     }
 
     private func deleteActiveSubscriptions(offsets: IndexSet) {
+        let remainingSubscriptions = activeSubscriptions.enumerated()
+            .filter { !offsets.contains($0.offset) }
+            .map(\.element)
+
         for index in offsets {
             modelContext.delete(activeSubscriptions[index])
         }
+
+        remainingSubscriptions.normalizeSortOrders()
+        saveModelContext()
     }
 
     private func deleteInactiveSubscriptions(offsets: IndexSet) {
+        let remainingSubscriptions = inactiveSubscriptions.enumerated()
+            .filter { !offsets.contains($0.offset) }
+            .map(\.element)
+
         for index in offsets {
             modelContext.delete(inactiveSubscriptions[index])
         }
+
+        remainingSubscriptions.normalizeSortOrders()
+        saveModelContext()
+    }
+
+    private func moveActiveSubscriptions(from source: IndexSet, to destination: Int) {
+        var reorderedSubscriptions = activeSubscriptions
+        reorderedSubscriptions.move(fromOffsets: source, toOffset: destination)
+        reorderedSubscriptions.normalizeSortOrders()
+        saveModelContext()
+    }
+
+    private func moveInactiveSubscriptions(from source: IndexSet, to destination: Int) {
+        var reorderedSubscriptions = inactiveSubscriptions
+        reorderedSubscriptions.move(fromOffsets: source, toOffset: destination)
+        reorderedSubscriptions.normalizeSortOrders()
+        saveModelContext()
     }
 
     private var filteredSubscriptions: [SubscriptionItem] {
@@ -163,6 +211,24 @@ struct SubscriptionTabView: View {
         filteredSubscriptions.filter { !$0.isActive }
     }
 
+    private var allowsManualReordering: Bool {
+        selectedFilter == .all
+    }
+
+    private var firstFilteredSubscriptionID: PersistentIdentifier? {
+        filteredSubscriptions.first?.persistentModelID
+    }
+
+    @ViewBuilder
+    private func subscriptionNavigationLink(for subscription: SubscriptionItem) -> some View {
+        NavigationLink {
+            SubscriptionDetailView(subscription: subscription)
+        } label: {
+            SubscriptionRow(subscription: subscription)
+        }
+        .swipeToDeleteTip(isPresented: subscription.persistentModelID == firstFilteredSubscriptionID)
+    }
+
     private func shouldConfirmSampleDataReplacement() -> Bool {
         SampleDataSeeder.hasAnyData(in: modelContext)
     }
@@ -178,6 +244,21 @@ struct SubscriptionTabView: View {
 
         hasCreatedItemInPresentedSheet = false
         reviewRequestTrigger += 1
+    }
+
+    private func normalizeSortOrdersIfNeeded() {
+        let didChange = activeSubscriptions.normalizeSortOrders()
+            || inactiveSubscriptions.normalizeSortOrders()
+
+        guard didChange else {
+            return
+        }
+
+        saveModelContext()
+    }
+
+    private func saveModelContext() {
+        try? modelContext.save()
     }
 }
 

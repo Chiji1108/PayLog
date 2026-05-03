@@ -212,6 +212,7 @@ enum SubscriptionPaymentMethod: String, CaseIterable, Codable, Identifiable {
 final class SubscriptionItem {
     var name: String = ""
     var amount: Decimal = 0
+    var sortOrder: Int = 0
     var createdAt: Date = Date.now
     var billingInterval: Int = 1
     var billingAnchorDate: Date = Date.now
@@ -282,10 +283,12 @@ final class SubscriptionItem {
         notes: String? = nil,
         card: Card? = nil,
         bank: Bank? = nil,
-        isActive: Bool = true
+        isActive: Bool = true,
+        sortOrder: Int = 0
     ) {
         self.name = name
         self.amount = amount
+        self.sortOrder = sortOrder
         self.createdAt = createdAt
         self.billingInterval = max(billingInterval, 1)
         self.billingAnchorDate = Calendar.autoupdatingCurrent.startOfDay(for: billingAnchorDate)

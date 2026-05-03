@@ -11,10 +11,18 @@ import TipKit
 
 struct BankTabView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var banks: [Bank]
+    @Query(
+        sort: [
+            SortDescriptor(\Bank.sortOrder),
+            SortDescriptor(\Bank.createdAt, order: .reverse),
+            SortDescriptor(\Bank.name)
+        ]
+    ) private var banks: [Bank]
     @State private var showingAddSheet = false
     @State private var hasCreatedItemInPresentedSheet = false
     @State private var reviewRequestTrigger = 0
+
+    init() {}
 
     var body: some View {
         NavigationStack {
@@ -40,6 +48,7 @@ struct BankTabView: View {
                                     .swipeToDeleteTip(isPresented: bank.id == displayedBanks.first?.id)
                                 }
                                 .onDelete(perform: deleteActiveBanks)
+                                .onMove(perform: moveActiveBanks)
                             } header: {
                                 ActiveStatusSectionHeader(isActive: true)
                             }
@@ -56,6 +65,7 @@ struct BankTabView: View {
                                     .swipeToDeleteTip(isPresented: bank.id == displayedBanks.first?.id)
                                 }
                                 .onDelete(perform: deleteInactiveBanks)
+                                .onMove(perform: moveInactiveBanks)
                             } header: {
                                 ActiveStatusSectionHeader(isActive: false)
                             }
@@ -64,7 +74,14 @@ struct BankTabView: View {
                 }
             }
             .navigationTitle("銀行口座")
+            .task {
+                normalizeSortOrdersIfNeeded()
+            }
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    EditButton()
+                }
+
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
                         showingAddSheet = true
@@ -92,15 +109,43 @@ struct BankTabView: View {
     }
 
     private func deleteActiveBanks(offsets: IndexSet) {
+        let remainingBanks = activeBanks.enumerated()
+            .filter { !offsets.contains($0.offset) }
+            .map(\.element)
+
         for index in offsets {
             modelContext.delete(activeBanks[index])
         }
+
+        remainingBanks.normalizeSortOrders()
+        saveModelContext()
     }
 
     private func deleteInactiveBanks(offsets: IndexSet) {
+        let remainingBanks = inactiveBanks.enumerated()
+            .filter { !offsets.contains($0.offset) }
+            .map(\.element)
+
         for index in offsets {
             modelContext.delete(inactiveBanks[index])
         }
+
+        remainingBanks.normalizeSortOrders()
+        saveModelContext()
+    }
+
+    private func moveActiveBanks(from source: IndexSet, to destination: Int) {
+        var reorderedBanks = activeBanks
+        reorderedBanks.move(fromOffsets: source, toOffset: destination)
+        reorderedBanks.normalizeSortOrders()
+        saveModelContext()
+    }
+
+    private func moveInactiveBanks(from source: IndexSet, to destination: Int) {
+        var reorderedBanks = inactiveBanks
+        reorderedBanks.move(fromOffsets: source, toOffset: destination)
+        reorderedBanks.normalizeSortOrders()
+        saveModelContext()
     }
 
     private var displayedBanks: [Bank] {
@@ -130,6 +175,20 @@ struct BankTabView: View {
 
         hasCreatedItemInPresentedSheet = false
         reviewRequestTrigger += 1
+    }
+
+    private func normalizeSortOrdersIfNeeded() {
+        let didChange = activeBanks.normalizeSortOrders() || inactiveBanks.normalizeSortOrders()
+
+        guard didChange else {
+            return
+        }
+
+        saveModelContext()
+    }
+
+    private func saveModelContext() {
+        try? modelContext.save()
     }
 }
 

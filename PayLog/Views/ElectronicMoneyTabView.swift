@@ -11,10 +11,18 @@ import TipKit
 
 struct ElectronicMoneyTabView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var electronicMoneys: [ElectronicMoney]
+    @Query(
+        sort: [
+            SortDescriptor(\ElectronicMoney.sortOrder),
+            SortDescriptor(\ElectronicMoney.createdAt, order: .reverse),
+            SortDescriptor(\ElectronicMoney.name)
+        ]
+    ) private var electronicMoneys: [ElectronicMoney]
     @State private var showingAddSheet = false
     @State private var hasCreatedItemInPresentedSheet = false
     @State private var reviewRequestTrigger = 0
+
+    init() {}
 
     var body: some View {
         NavigationStack {
@@ -40,6 +48,7 @@ struct ElectronicMoneyTabView: View {
                                     .swipeToDeleteTip(isPresented: electronicMoney.id == displayedElectronicMoneys.first?.id)
                                 }
                                 .onDelete(perform: deleteActiveElectronicMoneys)
+                                .onMove(perform: moveActiveElectronicMoneys)
                             } header: {
                                 ActiveStatusSectionHeader(isActive: true)
                             }
@@ -56,6 +65,7 @@ struct ElectronicMoneyTabView: View {
                                     .swipeToDeleteTip(isPresented: electronicMoney.id == displayedElectronicMoneys.first?.id)
                                 }
                                 .onDelete(perform: deleteInactiveElectronicMoneys)
+                                .onMove(perform: moveInactiveElectronicMoneys)
                             } header: {
                                 ActiveStatusSectionHeader(isActive: false)
                             }
@@ -64,7 +74,14 @@ struct ElectronicMoneyTabView: View {
                 }
             }
             .navigationTitle("電子マネー")
+            .task {
+                normalizeSortOrdersIfNeeded()
+            }
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    EditButton()
+                }
+
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
                         showingAddSheet = true
@@ -92,15 +109,43 @@ struct ElectronicMoneyTabView: View {
     }
 
     private func deleteActiveElectronicMoneys(offsets: IndexSet) {
+        let remainingElectronicMoneys = activeElectronicMoneys.enumerated()
+            .filter { !offsets.contains($0.offset) }
+            .map(\.element)
+
         for index in offsets {
             modelContext.delete(activeElectronicMoneys[index])
         }
+
+        remainingElectronicMoneys.normalizeSortOrders()
+        saveModelContext()
     }
 
     private func deleteInactiveElectronicMoneys(offsets: IndexSet) {
+        let remainingElectronicMoneys = inactiveElectronicMoneys.enumerated()
+            .filter { !offsets.contains($0.offset) }
+            .map(\.element)
+
         for index in offsets {
             modelContext.delete(inactiveElectronicMoneys[index])
         }
+
+        remainingElectronicMoneys.normalizeSortOrders()
+        saveModelContext()
+    }
+
+    private func moveActiveElectronicMoneys(from source: IndexSet, to destination: Int) {
+        var reorderedElectronicMoneys = activeElectronicMoneys
+        reorderedElectronicMoneys.move(fromOffsets: source, toOffset: destination)
+        reorderedElectronicMoneys.normalizeSortOrders()
+        saveModelContext()
+    }
+
+    private func moveInactiveElectronicMoneys(from source: IndexSet, to destination: Int) {
+        var reorderedElectronicMoneys = inactiveElectronicMoneys
+        reorderedElectronicMoneys.move(fromOffsets: source, toOffset: destination)
+        reorderedElectronicMoneys.normalizeSortOrders()
+        saveModelContext()
     }
 
     private var displayedElectronicMoneys: [ElectronicMoney] {
@@ -130,6 +175,21 @@ struct ElectronicMoneyTabView: View {
 
         hasCreatedItemInPresentedSheet = false
         reviewRequestTrigger += 1
+    }
+
+    private func normalizeSortOrdersIfNeeded() {
+        let didChange = activeElectronicMoneys.normalizeSortOrders()
+            || inactiveElectronicMoneys.normalizeSortOrders()
+
+        guard didChange else {
+            return
+        }
+
+        saveModelContext()
+    }
+
+    private func saveModelContext() {
+        try? modelContext.save()
     }
 }
 

@@ -35,6 +35,7 @@ final class Card {
     var withdrawalDay: Int?
     var notes: String?
     var isActive: Bool = true
+    var sortOrder: Int = 0
     var createdAt: Date = Date.now
     private var annualFeeSettingRawValue: String = CardAnnualFeeSetting.unspecified.rawValue
     var bank: Bank?
@@ -69,6 +70,7 @@ final class Card {
         annualFeeSetting: CardAnnualFeeSetting = .unspecified,
         annualFeeSubscription: SubscriptionItem? = nil,
         isActive: Bool = true,
+        sortOrder: Int = 0,
         createdAt: Date = Date.now
     ) {
         self.name = name
@@ -82,6 +84,7 @@ final class Card {
             : CardAnnualFeeSetting.paid.rawValue
         self.annualFeeSubscription = annualFeeSubscription
         self.isActive = isActive
+        self.sortOrder = sortOrder
         self.createdAt = createdAt
     }
 }

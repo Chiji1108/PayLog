@@ -13,6 +13,7 @@ final class ElectronicMoney {
     var name: String = ""
     var notes: String?
     var isActive: Bool = true
+    var sortOrder: Int = 0
     var createdAt: Date = Date.now
     var card: Card?
 
@@ -21,12 +22,14 @@ final class ElectronicMoney {
         notes: String? = nil,
         card: Card? = nil,
         isActive: Bool = true,
+        sortOrder: Int = 0,
         createdAt: Date = Date.now
     ) {
         self.name = name
         self.notes = notes
         self.card = card
         self.isActive = isActive
+        self.sortOrder = sortOrder
         self.createdAt = createdAt
     }
 }

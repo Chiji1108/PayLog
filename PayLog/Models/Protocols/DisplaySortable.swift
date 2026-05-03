@@ -6,10 +6,12 @@
 //
 
 import Foundation
+import SwiftData
 
-protocol DisplaySortable: Activatable {
+protocol DisplaySortable: AnyObject, Activatable {
     var name: String { get }
     var createdAt: Date { get }
+    var sortOrder: Int { get set }
 }
 
 extension Sequence where Element: DisplaySortable {
@@ -19,12 +21,43 @@ extension Sequence where Element: DisplaySortable {
                 return lhs.isActive && !rhs.isActive
             }
 
+            if lhs.sortOrder != rhs.sortOrder {
+                return lhs.sortOrder < rhs.sortOrder
+            }
+
             if lhs.createdAt != rhs.createdAt {
                 return lhs.createdAt > rhs.createdAt
             }
 
             return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
         }
+    }
+
+    @discardableResult
+    func normalizeSortOrders() -> Bool {
+        var didChange = false
+
+        for (index, element) in enumerated() where element.sortOrder != index {
+            element.sortOrder = index
+            didChange = true
+        }
+
+        return didChange
+    }
+}
+
+extension ModelContext {
+    func nextSortOrder<Model: PersistentModel & DisplaySortable>(
+        for modelType: Model.Type,
+        isActive: Bool
+    ) -> Int {
+        let descriptor = FetchDescriptor<Model>(
+            predicate: #Predicate { $0.isActive == isActive },
+            sortBy: [SortDescriptor(\.sortOrder, order: .reverse)]
+        )
+
+        let currentMaxSortOrder = (try? fetch(descriptor).first?.sortOrder) ?? -1
+        return currentMaxSortOrder + 1
     }
 }
 

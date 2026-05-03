@@ -11,10 +11,18 @@ import TipKit
 
 struct CardTabView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var cards: [Card]
+    @Query(
+        sort: [
+            SortDescriptor(\Card.sortOrder),
+            SortDescriptor(\Card.createdAt, order: .reverse),
+            SortDescriptor(\Card.name)
+        ]
+    ) private var cards: [Card]
     @State private var showingAddSheet = false
     @State private var hasCreatedItemInPresentedSheet = false
     @State private var reviewRequestTrigger = 0
+
+    init() {}
 
     var body: some View {
         NavigationStack {
@@ -40,6 +48,7 @@ struct CardTabView: View {
                                     .swipeToDeleteTip(isPresented: card.id == displayedCards.first?.id)
                                 }
                                 .onDelete(perform: deleteActiveCards)
+                                .onMove(perform: moveActiveCards)
                             } header: {
                                 ActiveStatusSectionHeader(isActive: true)
                             }
@@ -56,6 +65,7 @@ struct CardTabView: View {
                                     .swipeToDeleteTip(isPresented: card.id == displayedCards.first?.id)
                                 }
                                 .onDelete(perform: deleteInactiveCards)
+                                .onMove(perform: moveInactiveCards)
                             } header: {
                                 ActiveStatusSectionHeader(isActive: false)
                             }
@@ -64,7 +74,14 @@ struct CardTabView: View {
                 }
             }
             .navigationTitle("カード")
+            .task {
+                normalizeSortOrdersIfNeeded()
+            }
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    EditButton()
+                }
+
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     NavigationLink {
                         CardNotificationSettingsView()
@@ -98,19 +115,45 @@ struct CardTabView: View {
     }
 
     private func deleteActiveCards(offsets: IndexSet) {
+        let remainingCards = activeCards.enumerated()
+            .filter { !offsets.contains($0.offset) }
+            .map(\.element)
+
         for index in offsets {
             modelContext.delete(activeCards[index])
         }
 
+        remainingCards.normalizeSortOrders()
+        saveModelContext()
         rescheduleNotifications()
     }
 
     private func deleteInactiveCards(offsets: IndexSet) {
+        let remainingCards = inactiveCards.enumerated()
+            .filter { !offsets.contains($0.offset) }
+            .map(\.element)
+
         for index in offsets {
             modelContext.delete(inactiveCards[index])
         }
 
+        remainingCards.normalizeSortOrders()
+        saveModelContext()
         rescheduleNotifications()
+    }
+
+    private func moveActiveCards(from source: IndexSet, to destination: Int) {
+        var reorderedCards = activeCards
+        reorderedCards.move(fromOffsets: source, toOffset: destination)
+        reorderedCards.normalizeSortOrders()
+        saveModelContext()
+    }
+
+    private func moveInactiveCards(from source: IndexSet, to destination: Int) {
+        var reorderedCards = inactiveCards
+        reorderedCards.move(fromOffsets: source, toOffset: destination)
+        reorderedCards.normalizeSortOrders()
+        saveModelContext()
     }
 
     private var displayedCards: [Card] {
@@ -148,6 +191,20 @@ struct CardTabView: View {
 
         hasCreatedItemInPresentedSheet = false
         reviewRequestTrigger += 1
+    }
+
+    private func normalizeSortOrdersIfNeeded() {
+        let didChange = activeCards.normalizeSortOrders() || inactiveCards.normalizeSortOrders()
+
+        guard didChange else {
+            return
+        }
+
+        saveModelContext()
+    }
+
+    private func saveModelContext() {
+        try? modelContext.save()
     }
 }
 

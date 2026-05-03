@@ -11,6 +11,13 @@ import SwiftData
 struct SubscriptionEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query(
+        sort: [
+            SortDescriptor(\SubscriptionItem.sortOrder),
+            SortDescriptor(\SubscriptionItem.createdAt, order: .reverse),
+            SortDescriptor(\SubscriptionItem.name)
+        ]
+    ) private var subscriptions: [SubscriptionItem]
     @Query(sort: \Card.name) private var cards: [Card]
     @Query(sort: \Bank.name) private var banks: [Bank]
 
@@ -211,6 +218,7 @@ struct SubscriptionEditorView: View {
                         let selectedBank = paymentMethod == .bankAccount ? selectedBank : nil
 
                         if let subscription {
+                            let didChangeActiveState = subscription.isActive != isActive
                             subscription.name = trimmedName
                             subscription.amount = amount
                             subscription.billingInterval = billingInterval
@@ -222,6 +230,12 @@ struct SubscriptionEditorView: View {
                             subscription.card = selectedCard
                             subscription.bank = selectedBank
                             subscription.isActive = isActive
+                            if didChangeActiveState {
+                                subscription.sortOrder = modelContext.nextSortOrder(
+                                    for: SubscriptionItem.self,
+                                    isActive: isActive
+                                )
+                            }
                         } else {
                             let subscription = SubscriptionItem(
                                 name: trimmedName,
@@ -234,12 +248,14 @@ struct SubscriptionEditorView: View {
                                 notes: trimmedNotes,
                                 card: selectedCard,
                                 bank: selectedBank,
-                                isActive: isActive
+                                isActive: isActive,
+                                sortOrder: modelContext.nextSortOrder(for: SubscriptionItem.self, isActive: isActive)
                             )
                             modelContext.insert(subscription)
                             onCreate?()
                             onCreateSubscription?(subscription)
                         }
+                        try? modelContext.save()
                         dismiss()
                     }
                     .disabled(isSaveDisabled)

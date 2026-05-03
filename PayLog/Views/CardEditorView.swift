@@ -11,6 +11,13 @@ import SwiftData
 struct CardEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query(
+        sort: [
+            SortDescriptor(\Card.sortOrder),
+            SortDescriptor(\Card.createdAt, order: .reverse),
+            SortDescriptor(\Card.name)
+        ]
+    ) private var cards: [Card]
     @Query(sort: \Bank.name) private var banks: [Bank]
     @Query(sort: \SubscriptionItem.name) private var subscriptions: [SubscriptionItem]
 
@@ -166,6 +173,7 @@ struct CardEditorView: View {
                         }
 
                         if let card {
+                            let didChangeActiveState = card.isActive != isActive
                             card.name = trimmedName
                             card.lastFourDigits = trimmedLastFourDigits
                             card.closingDay = closingDay
@@ -177,6 +185,9 @@ struct CardEditorView: View {
                                 ? selectedAnnualFeeSubscription
                                 : nil
                             card.isActive = isActive
+                            if didChangeActiveState {
+                                card.sortOrder = modelContext.nextSortOrder(for: Card.self, isActive: isActive)
+                            }
                         } else {
                             let card = Card(
                                 name: trimmedName,
@@ -189,7 +200,8 @@ struct CardEditorView: View {
                                 annualFeeSubscription: annualFeeSetting == .paid
                                     ? selectedAnnualFeeSubscription
                                     : nil,
-                                isActive: isActive
+                                isActive: isActive,
+                                sortOrder: modelContext.nextSortOrder(for: Card.self, isActive: isActive)
                             )
                             modelContext.insert(card)
                             onCreate?()

@@ -11,6 +11,13 @@ import SwiftData
 struct BankEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query(
+        sort: [
+            SortDescriptor(\Bank.sortOrder),
+            SortDescriptor(\Bank.createdAt, order: .reverse),
+            SortDescriptor(\Bank.name)
+        ]
+    ) private var banks: [Bank]
 
     private let bank: Bank?
     private let onDelete: (() -> Void)?
@@ -96,23 +103,29 @@ struct BankEditorView: View {
                         }
 
                         if let bank {
+                            let didChangeActiveState = bank.isActive != isActive
                             bank.name = trimmedName
                             bank.branchName = trimmedBranchName
                             bank.accountNumber = trimmedAccountNumber
                             bank.notes = trimmedNotes
                             bank.isActive = isActive
+                            if didChangeActiveState {
+                                bank.sortOrder = modelContext.nextSortOrder(for: Bank.self, isActive: isActive)
+                            }
                         } else {
                             let bank = Bank(
                                 name: trimmedName,
                                 branchName: trimmedBranchName,
                                 accountNumber: trimmedAccountNumber,
                                 notes: trimmedNotes,
-                                isActive: isActive
+                                isActive: isActive,
+                                sortOrder: modelContext.nextSortOrder(for: Bank.self, isActive: isActive)
                             )
                             modelContext.insert(bank)
                             onCreate?()
                             onCreateBank?(bank)
                         }
+                        try? modelContext.save()
                         dismiss()
                     }
                     .disabled(trimmedName.isEmpty)
@@ -156,6 +169,7 @@ struct BankEditorView: View {
 
     private func deleteBank(_ bank: Bank) {
         modelContext.delete(bank)
+        try? modelContext.save()
         onDelete?()
         dismiss()
     }

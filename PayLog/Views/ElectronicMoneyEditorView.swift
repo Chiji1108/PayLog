@@ -11,6 +11,13 @@ import SwiftData
 struct ElectronicMoneyEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query(
+        sort: [
+            SortDescriptor(\ElectronicMoney.sortOrder),
+            SortDescriptor(\ElectronicMoney.createdAt, order: .reverse),
+            SortDescriptor(\ElectronicMoney.name)
+        ]
+    ) private var electronicMoneys: [ElectronicMoney]
     @Query(sort: \Card.name) private var cards: [Card]
 
     private let electronicMoney: ElectronicMoney?
@@ -93,20 +100,29 @@ struct ElectronicMoneyEditorView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
                         if let electronicMoney {
+                            let didChangeActiveState = electronicMoney.isActive != isActive
                             electronicMoney.name = trimmedName
                             electronicMoney.notes = trimmedNotes
                             electronicMoney.card = selectedCard
                             electronicMoney.isActive = isActive
+                            if didChangeActiveState {
+                                electronicMoney.sortOrder = modelContext.nextSortOrder(
+                                    for: ElectronicMoney.self,
+                                    isActive: isActive
+                                )
+                            }
                         } else {
                             let electronicMoney = ElectronicMoney(
                                 name: trimmedName,
                                 notes: trimmedNotes,
                                 card: selectedCard,
-                                isActive: isActive
+                                isActive: isActive,
+                                sortOrder: modelContext.nextSortOrder(for: ElectronicMoney.self, isActive: isActive)
                             )
                             modelContext.insert(electronicMoney)
                             onCreate?()
                         }
+                        try? modelContext.save()
                         dismiss()
                     }
                     .disabled(trimmedName.isEmpty)
@@ -137,6 +153,7 @@ struct ElectronicMoneyEditorView: View {
 
     private func deleteElectronicMoney(_ electronicMoney: ElectronicMoney) {
         modelContext.delete(electronicMoney)
+        try? modelContext.save()
         onDelete?()
         dismiss()
     }

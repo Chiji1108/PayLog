@@ -15,6 +15,7 @@ final class Bank {
     var accountNumber: String?
     var notes: String?
     var isActive: Bool = true
+    var sortOrder: Int = 0
     var createdAt: Date = Date.now
     @Relationship(deleteRule: .nullify, inverse: \Card.bank) var cards: [Card]?
     @Relationship(deleteRule: .nullify, inverse: \SubscriptionItem.bank) var subscriptions: [SubscriptionItem]?
@@ -25,6 +26,7 @@ final class Bank {
         accountNumber: String? = nil,
         notes: String? = nil,
         isActive: Bool = true,
+        sortOrder: Int = 0,
         createdAt: Date = Date.now
     ) {
         self.name = name
@@ -32,6 +34,7 @@ final class Bank {
         self.accountNumber = accountNumber
         self.notes = notes
         self.isActive = isActive
+        self.sortOrder = sortOrder
         self.createdAt = createdAt
     }
 }
