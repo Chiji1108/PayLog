@@ -11,6 +11,7 @@ import SwiftData
 struct SubscriptionInsightsView: View {
     @Query private var subscriptions: [SubscriptionItem]
     @State private var yenRates = SubscriptionInsightSettings.loadYenRates()
+    @State private var selectedPeriod: SubscriptionInsightPeriod = .month
 
     private let rateFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
@@ -58,11 +59,23 @@ struct SubscriptionInsightsView: View {
                 }
 
                 Section {
-                    totalRow(title: "月額", amount: summary.monthlyTotal)
-                    totalRow(title: "年額", amount: summary.yearlyTotal)
-                    totalRow(title: "日額", amount: summary.dailyTotal)
+                    Picker("表示単位", selection: $selectedPeriod) {
+                        ForEach(SubscriptionInsightPeriod.allCases) { period in
+                            Text(period.label).tag(period)
+                        }
+                    }
+                    .pickerStyle(.segmented)
                 } header: {
-                    Text("換算合計")
+                    Text("換算単位")
+                }
+
+                Section {
+                    totalRow(
+                        title: selectedPeriod.totalTitle,
+                        amount: summary.total(for: selectedPeriod)
+                    )
+                } header: {
+                    Text("合計")
                 } footer: {
                     Text(totalFooterText)
                 }
@@ -91,14 +104,20 @@ struct SubscriptionInsightsView: View {
 
                                 Spacer()
 
-                                Text(SubscriptionCurrency.jpy.formattedAmount(item.monthlyAmount))
+                                Text(
+                                    SubscriptionCurrency.jpy.formattedAmount(
+                                        item.amount(for: selectedPeriod)
+                                    )
+                                )
                                     .fontWeight(.semibold)
                                     .monospacedDigit()
                             }
                         }
                     }
                 } header: {
-                    Text("月額換算で高い順")
+                    Text("ランキング")
+                } footer: {
+                    Text(selectedPeriod.rankingTitle)
                 }
             }
         }

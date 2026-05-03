@@ -20,14 +20,79 @@ struct SubscriptionInsightSummary {
     var hasMissingRates: Bool {
         !missingCurrencyCounts.isEmpty
     }
+
+    func total(for period: SubscriptionInsightPeriod) -> Decimal {
+        switch period {
+        case .day:
+            dailyTotal
+        case .month:
+            monthlyTotal
+        case .year:
+            yearlyTotal
+        }
+    }
 }
 
 struct SubscriptionRankedItem: Identifiable {
     let subscription: SubscriptionItem
+    let dailyAmount: Decimal
     let monthlyAmount: Decimal
+    let yearlyAmount: Decimal
 
     var id: PersistentIdentifier {
         subscription.persistentModelID
+    }
+
+    func amount(for period: SubscriptionInsightPeriod) -> Decimal {
+        switch period {
+        case .day:
+            dailyAmount
+        case .month:
+            monthlyAmount
+        case .year:
+            yearlyAmount
+        }
+    }
+}
+
+enum SubscriptionInsightPeriod: String, CaseIterable, Identifiable {
+    case day
+    case month
+    case year
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .day:
+            "日"
+        case .month:
+            "月"
+        case .year:
+            "年"
+        }
+    }
+
+    var totalTitle: String {
+        switch self {
+        case .day:
+            "日割り換算"
+        case .month:
+            "月額換算"
+        case .year:
+            "年額換算"
+        }
+    }
+
+    var rankingTitle: String {
+        switch self {
+        case .day:
+            "日割り換算で高い順"
+        case .month:
+            "月額換算で高い順"
+        case .year:
+            "年額換算で高い順"
+        }
     }
 }
 
@@ -94,7 +159,9 @@ enum SubscriptionInsightCalculator {
             rankedSubscriptions.append(
                 SubscriptionRankedItem(
                     subscription: subscription,
-                    monthlyAmount: yearlyAmount / monthsPerYear
+                    dailyAmount: yearlyAmount / daysPerYear,
+                    monthlyAmount: yearlyAmount / monthsPerYear,
+                    yearlyAmount: yearlyAmount
                 )
             )
         }
