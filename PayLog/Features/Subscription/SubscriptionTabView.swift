@@ -299,7 +299,7 @@ struct SubscriptionTabView: View {
             }
         } else {
             ForEach(filteredCurrencyTotals) { total in
-                LabeledContent(total.currency.code) {
+                LabeledContent(total.currency.displayLabel) {
                     Text(filteredSummaryValueText(for: total))
                         .fontWeight(.semibold)
                         .monospacedDigit()

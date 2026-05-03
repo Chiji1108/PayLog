@@ -126,6 +126,10 @@ enum SubscriptionCurrency: String, CaseIterable, Codable, Identifiable {
         "\(label) (\(symbol) \(code))"
     }
 
+    var displayLabel: String {
+        "\(label) (\(code))"
+    }
+
     var editorUnitLabel: String {
         "\(symbol) \(code)"
     }
