@@ -12,6 +12,7 @@ struct SubscriptionInsightsView: View {
     @Query private var subscriptions: [SubscriptionItem]
     @State private var yenRates = SubscriptionInsightSettings.loadYenRates()
     @State private var selectedPeriod: SubscriptionInsightPeriod = .month
+    @State private var expandedPaymentMethods: Set<SubscriptionPaymentMethod> = [.card, .bankAccount]
 
     private let rateFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
@@ -215,7 +216,9 @@ struct SubscriptionInsightsView: View {
     @ViewBuilder
     private func paymentMethodDisclosureGroup(_ group: SubscriptionPaymentMethodGroup) -> some View {
         if group.subgroups.isEmpty {
-            DisclosureGroup {
+            DisclosureGroup(
+                isExpanded: bindingForPaymentMethod(group.paymentMethod)
+            ) {
                 ForEach(group.items) { item in
                     subscriptionItemRow(item)
                 }
@@ -228,7 +231,9 @@ struct SubscriptionInsightsView: View {
                 )
             }
         } else {
-            DisclosureGroup {
+            DisclosureGroup(
+                isExpanded: bindingForPaymentMethod(group.paymentMethod)
+            ) {
                 ForEach(group.subgroups) { subgroup in
                     DisclosureGroup {
                         ForEach(subgroup.items) { item in
@@ -252,6 +257,19 @@ struct SubscriptionInsightsView: View {
                 )
             }
         }
+    }
+
+    private func bindingForPaymentMethod(_ paymentMethod: SubscriptionPaymentMethod) -> Binding<Bool> {
+        Binding(
+            get: { expandedPaymentMethods.contains(paymentMethod) },
+            set: { isExpanded in
+                if isExpanded {
+                    expandedPaymentMethods.insert(paymentMethod)
+                } else {
+                    expandedPaymentMethods.remove(paymentMethod)
+                }
+            }
+        )
     }
 
     @ViewBuilder
