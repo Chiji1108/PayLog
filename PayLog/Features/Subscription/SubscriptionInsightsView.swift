@@ -61,9 +61,9 @@ struct SubscriptionInsightsView: View {
                         }
                     }
                 }
-
+                
                 Section {
-                    Picker("表示単位", selection: $selectedPeriod) {
+                    Picker("換算単位", selection: $selectedPeriod) {
                         ForEach(SubscriptionInsightPeriod.allCases) { period in
                             Text(period.label).tag(period)
                         }
@@ -72,16 +72,18 @@ struct SubscriptionInsightsView: View {
                 } header: {
                     Text("換算単位")
                 }
-
+                
                 Section {
                     paymentSourceChartSection
                 } header: {
                     Text("集計")
                 } footer: {
-                    Text(totalFooterText)
+                    if summary.hasMissingRates {
+                        Text(totalFooterText)
+                    }
                 }
 
-                Section {
+                Section("ランキング") {
                     if summary.rankedSubscriptions.isEmpty {
                         ContentUnavailableView(
                             "換算できる固定費がありません",
@@ -90,35 +92,27 @@ struct SubscriptionInsightsView: View {
                         )
                     } else {
                         ForEach(Array(summary.rankedSubscriptions.enumerated()), id: \.element.id) { index, item in
-                            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                                Text("\(index + 1)")
-                                    .font(.headline)
-                                    .foregroundStyle(.secondary)
-                                    .frame(minWidth: 24, alignment: .leading)
-
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(item.subscription.name)
-                                    Text(item.subscription.amountWithBillingCycleText)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                Spacer()
-
-                                Text(
-                                    SubscriptionCurrency.jpy.formattedAmount(
-                                        item.amount(for: selectedPeriod)
+                            Label {
+                                LabeledContent {
+                                    Text(
+                                        SubscriptionCurrency.jpy.formattedAmount(
+                                            item.amount(for: selectedPeriod)
+                                        )
                                     )
-                                )
-                                    .fontWeight(.semibold)
-                                    .monospacedDigit()
+                                        .monospacedDigit()
+                                } label: {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(item.subscription.name)
+                                        Text(item.subscription.amountWithBillingCycleText)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            } icon: {
+                                Text("\(index + 1)")
                             }
                         }
                     }
-                } header: {
-                    Text("ランキング")
-                } footer: {
-                    Text(selectedPeriod.rankingTitle)
                 }
             }
         }
@@ -133,7 +127,6 @@ struct SubscriptionInsightsView: View {
                         ShareLink(
                             item: sharePhoto,
                             subject: Text("固定費サマリー"),
-                            message: Text(shareSummaryText),
                             preview: SharePreview(
                                 sharePhoto.title,
                                 image: sharePhoto.image
@@ -169,18 +162,6 @@ struct SubscriptionInsightsView: View {
 
     private var paymentSourceChartItems: [PaymentSourceChartItem] {
         var items: [PaymentSourceChartItem] = []
-        let palette: [Color] = [
-            .blue,
-            .mint,
-            .orange,
-            .pink,
-            .teal,
-            .indigo,
-            .green,
-            .cyan,
-            .brown
-        ]
-        var colorIndex = 0
 
         for group in summary.paymentMethodGroups {
             if group.subgroups.isEmpty {
@@ -195,11 +176,9 @@ struct SubscriptionInsightsView: View {
                         title: group.paymentMethod.label,
                         amount: amount,
                         convertedCount: group.convertedSubscriptionCount,
-                        totalCount: group.totalSubscriptionCount,
-                        color: palette[colorIndex % palette.count]
+                        totalCount: group.totalSubscriptionCount
                     )
                 )
-                colorIndex += 1
             } else {
                 for subgroup in group.subgroups {
                     let amount = subgroup.total(for: selectedPeriod)
@@ -213,11 +192,9 @@ struct SubscriptionInsightsView: View {
                             title: subgroup.title,
                             amount: amount,
                             convertedCount: subgroup.convertedSubscriptionCount,
-                            totalCount: subgroup.totalSubscriptionCount,
-                            color: palette[colorIndex % palette.count]
+                            totalCount: subgroup.totalSubscriptionCount
                         )
                     )
-                    colorIndex += 1
                 }
             }
         }
@@ -237,7 +214,8 @@ struct SubscriptionInsightsView: View {
         }
 
         if summary.hasMissingRates {
-            return "アクティブな固定費 \(summary.totalSubscriptionCount) 件中 \(summary.convertedSubscriptionCount) 件を換算しています。"
+            let unconvertedCount = summary.totalSubscriptionCount - summary.convertedSubscriptionCount
+            return "為替レート未設定のため、未換算の固定費が \(unconvertedCount) 件あります。"
         }
 
         return "アクティブな固定費 \(summary.totalSubscriptionCount) 件をすべて換算しています。"
@@ -266,31 +244,6 @@ struct SubscriptionInsightsView: View {
         return totalFooterText
     }
 
-    private var shareSummaryText: String {
-        var lines: [String] = ["固定費サマリー"]
-
-        let topSubscriptions = Array(summary.rankedSubscriptions.prefix(5))
-        if !topSubscriptions.isEmpty {
-            lines.append("")
-            lines.append(topSubscriptions.count == 5 ? "上位5件" : "上位項目")
-            lines.append(
-                contentsOf: topSubscriptions.enumerated().map { index, item in
-                    "\(index + 1). \(item.subscription.name): \(SubscriptionCurrency.jpy.formattedAmount(item.amount(for: selectedPeriod))) / \(selectedPeriod.shareUnitLabel)"
-                }
-            )
-        }
-
-        if summary.hasMissingRates {
-            lines.append("")
-            lines.append("メモ")
-            lines.append(
-                "・\(summary.totalSubscriptionCount - summary.convertedSubscriptionCount)件は為替レート未設定のため集計外"
-            )
-        }
-
-        return lines.joined(separator: "\n")
-    }
-
     @ViewBuilder
     private var paymentSourceChartSection: some View {
         if paymentSourceChartItems.isEmpty {
@@ -300,68 +253,25 @@ struct SubscriptionInsightsView: View {
                 description: Text("為替レートを設定すると支払い元ごとの構成を表示できます。")
             )
         } else {
-            Chart(paymentSourceChartItems) { item in
-                SectorMark(
-                    angle: .value("金額", item.doubleAmount),
-                    innerRadius: .ratio(0.62),
-                    angularInset: 1.5
-                )
-                .cornerRadius(4)
-                .foregroundStyle(item.color)
-                .accessibilityLabel(item.title)
-                .accessibilityValue(SubscriptionCurrency.jpy.formattedAmount(item.amount))
-            }
-            .chartLegend(.hidden)
-            .frame(height: 260)
-            .chartBackground { chartProxy in
-                GeometryReader { geometry in
-                    if let plotFrame = chartProxy.plotFrame {
-                        let frame = geometry[plotFrame]
-
-                        VStack(spacing: 4) {
-                            Text(selectedPeriod.totalTitle)
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                            Text(SubscriptionCurrency.jpy.formattedAmount(summary.total(for: selectedPeriod)))
-                                .font(.title3.weight(.bold))
-                                .monospacedDigit()
-                        }
-                        .position(x: frame.midX, y: frame.midY)
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(spacing: 4) {
+                    LabeledContent(selectedPeriod.totalTitle) {
+                        Text(SubscriptionCurrency.jpy.formattedAmount(summary.total(for: selectedPeriod)))
+                            .monospacedDigit()
                     }
+
+                    Chart(paymentSourceChartItems) { item in
+                        BarMark(
+                            x: .value("金額", item.doubleAmount),
+                            y: .value("区分", "支払い元")
+                        )
+                        .foregroundStyle(by: .value("支払い元", item.title))
+                        .accessibilityLabel(item.title)
+                        .accessibilityValue(SubscriptionCurrency.jpy.formattedAmount(item.amount))
+                    }
+                    .chartXAxis(.hidden)
+                    .chartYAxis(.hidden)
                 }
-            }
-
-            ForEach(paymentSourceChartItems) { item in
-                paymentSourceChartRow(item)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func paymentSourceChartRow(_ item: PaymentSourceChartItem) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(item.color)
-                        .frame(width: 10, height: 10)
-
-                    Text(item.title)
-                        .foregroundStyle(.primary)
-                }
-
-                Spacer()
-
-                Text(SubscriptionCurrency.jpy.formattedAmount(item.amount))
-                    .foregroundStyle(.primary)
-                    .fontWeight(.semibold)
-                    .monospacedDigit()
-            }
-
-            if item.convertedCount != item.totalCount {
-                Text("\(item.convertedCount)/\(item.totalCount)件を換算")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -421,7 +331,6 @@ private struct PaymentSourceChartItem: Identifiable {
     let amount: Decimal
     let convertedCount: Int
     let totalCount: Int
-    let color: Color
 
     var doubleAmount: Double {
         NSDecimalNumber(decimal: amount).doubleValue
@@ -493,10 +402,10 @@ private struct SubscriptionInsightsShareCard: View {
                         innerRadius: .ratio(0.62),
                         angularInset: 1.5
                     )
-                    .cornerRadius(4)
-                    .foregroundStyle(item.color)
+//                    .cornerRadius(4)
+                    .foregroundStyle(by: .value("支払い元", item.title))
                 }
-                .chartLegend(.hidden)
+                .chartLegend(position: .bottom, alignment: .center, spacing: 24)
                 .frame(height: 320)
                 .chartBackground { chartProxy in
                     GeometryReader { geometry in
@@ -515,12 +424,6 @@ private struct SubscriptionInsightsShareCard: View {
                         }
                     }
                 }
-
-                VStack(alignment: .leading, spacing: 14) {
-                    ForEach(chartItems) { item in
-                        PaymentSourceChartRow(item: item)
-                    }
-                }
             }
 
             if let footerText {
@@ -537,38 +440,6 @@ private struct SubscriptionInsightsShareCard: View {
         )
         .padding(24)
         .background(Color(.systemGroupedBackground))
-    }
-}
-
-private struct PaymentSourceChartRow: View {
-    let item: PaymentSourceChartItem
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(item.color)
-                        .frame(width: 10, height: 10)
-
-                    Text(item.title)
-                        .foregroundStyle(.primary)
-                }
-
-                Spacer()
-
-                Text(SubscriptionCurrency.jpy.formattedAmount(item.amount))
-                    .foregroundStyle(.primary)
-                    .fontWeight(.semibold)
-                    .monospacedDigit()
-            }
-
-            if item.convertedCount != item.totalCount {
-                Text("\(item.convertedCount)/\(item.totalCount)件を換算")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
     }
 }
 
@@ -668,32 +539,28 @@ private struct ExchangeRateEditorView: View {
                 title: "三井住友カード",
                 amount: 8400,
                 convertedCount: 2,
-                totalCount: 2,
-                color: .blue
+                totalCount: 2
             ),
             PaymentSourceChartItem(
                 id: "bank-main",
                 title: "住信SBIネット銀行",
                 amount: 5200,
                 convertedCount: 1,
-                totalCount: 1,
-                color: .mint
+                totalCount: 1
             ),
             PaymentSourceChartItem(
                 id: "invoice",
                 title: "請求書払い",
                 amount: 3100,
                 convertedCount: 1,
-                totalCount: 1,
-                color: .orange
+                totalCount: 1
             ),
             PaymentSourceChartItem(
                 id: "onsite",
                 title: "現地払い",
                 amount: 1700,
                 convertedCount: 1,
-                totalCount: 1,
-                color: .pink
+                totalCount: 1
             )
         ],
         footerText: "アクティブな固定費 5 件中 4 件を換算しています。"
