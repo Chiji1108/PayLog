@@ -263,7 +263,7 @@ struct SubscriptionInsightsView: View {
                     Chart(paymentSourceChartItems) { item in
                         BarMark(
                             x: .value("金額", item.doubleAmount),
-                            y: .value("区分", "支払い元")
+                            y: .value("区分", "支払い元"),
                         )
                         .foregroundStyle(by: .value("支払い元", item.title))
                         .accessibilityLabel(item.title)
@@ -271,6 +271,7 @@ struct SubscriptionInsightsView: View {
                     }
                     .chartXAxis(.hidden)
                     .chartYAxis(.hidden)
+                    .frame(height: 80)
                 }
             }
         }
