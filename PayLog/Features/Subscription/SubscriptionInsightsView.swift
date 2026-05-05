@@ -81,6 +81,14 @@ struct SubscriptionInsightsView: View {
                 }
 
                 Section {
+                    ForEach(summary.paymentMethodGroups) { group in
+                        paymentMethodDisclosureGroup(group)
+                    }
+                } header: {
+                    Text("支払い元別")
+                }
+
+                Section {
                     if summary.rankedSubscriptions.isEmpty {
                         ContentUnavailableView(
                             "換算できる固定費がありません",
@@ -122,6 +130,21 @@ struct SubscriptionInsightsView: View {
             }
         }
         .navigationTitle("固定費サマリー")
+        .toolbar {
+            if !activeSubscriptions.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    ShareLink(
+                        item: Data(),
+                        subject: Text("固定費サマリー"),
+                        message: Text(shareSummaryText),
+                        preview: SharePreview("固定費サマリー")
+                    ) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .accessibilityLabel("固定費サマリーを共有")
+                }
+            }
+        }
     }
 
     private var activeSubscriptions: [SubscriptionItem] {
@@ -151,6 +174,34 @@ struct SubscriptionInsightsView: View {
         return "アクティブな固定費 \(summary.totalSubscriptionCount) 件をすべて換算しています。"
     }
 
+    private var shareSummaryText: String {
+        var lines: [String] = [
+            "固定費サマリー",
+            "合計: \(SubscriptionCurrency.jpy.formattedAmount(summary.total(for: selectedPeriod))) / \(selectedPeriod.shareUnitLabel)"
+        ]
+
+        let topSubscriptions = Array(summary.rankedSubscriptions.prefix(5))
+        if !topSubscriptions.isEmpty {
+            lines.append("")
+            lines.append(topSubscriptions.count == 5 ? "上位5件" : "上位項目")
+            lines.append(
+                contentsOf: topSubscriptions.enumerated().map { index, item in
+                    "\(index + 1). \(item.subscription.name): \(SubscriptionCurrency.jpy.formattedAmount(item.amount(for: selectedPeriod))) / \(selectedPeriod.shareUnitLabel)"
+                }
+            )
+        }
+
+        if summary.hasMissingRates {
+            lines.append("")
+            lines.append("メモ")
+            lines.append(
+                "・\(summary.totalSubscriptionCount - summary.convertedSubscriptionCount)件は為替レート未設定のため集計外"
+            )
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
     @ViewBuilder
     private func totalRow(title: String, amount: Decimal) -> some View {
         LabeledContent(title) {
@@ -158,6 +209,101 @@ struct SubscriptionInsightsView: View {
                 .foregroundStyle(.primary)
                 .fontWeight(.semibold)
                 .monospacedDigit()
+        }
+    }
+
+    @ViewBuilder
+    private func paymentMethodDisclosureGroup(_ group: SubscriptionPaymentMethodGroup) -> some View {
+        if group.subgroups.isEmpty {
+            DisclosureGroup {
+                ForEach(group.items) { item in
+                    subscriptionItemRow(item)
+                }
+            } label: {
+                groupRow(
+                    title: group.paymentMethod.label,
+                    amount: group.total(for: selectedPeriod),
+                    convertedCount: group.convertedSubscriptionCount,
+                    totalCount: group.totalSubscriptionCount
+                )
+            }
+        } else {
+            DisclosureGroup {
+                ForEach(group.subgroups) { subgroup in
+                    DisclosureGroup {
+                        ForEach(subgroup.items) { item in
+                            subscriptionItemRow(item)
+                        }
+                    } label: {
+                        groupRow(
+                            title: subgroup.title,
+                            amount: subgroup.total(for: selectedPeriod),
+                            convertedCount: subgroup.convertedSubscriptionCount,
+                            totalCount: subgroup.totalSubscriptionCount
+                        )
+                    }
+                }
+            } label: {
+                groupRow(
+                    title: group.paymentMethod.label,
+                    amount: group.total(for: selectedPeriod),
+                    convertedCount: group.convertedSubscriptionCount,
+                    totalCount: group.totalSubscriptionCount
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func groupRow(
+        title: String,
+        amount: Decimal,
+        convertedCount: Int,
+        totalCount: Int
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(title)
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Text(SubscriptionCurrency.jpy.formattedAmount(amount))
+                    .foregroundStyle(.primary)
+                    .fontWeight(.semibold)
+                    .monospacedDigit()
+            }
+
+            if convertedCount != totalCount {
+                Text("\(convertedCount)/\(totalCount)件を換算")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func subscriptionItemRow(_ item: SubscriptionConvertedItem) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.subscription.name)
+                Text(item.subscription.amountWithBillingCycleText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            if let amount = item.amount(for: selectedPeriod) {
+                Text(SubscriptionCurrency.jpy.formattedAmount(amount))
+                    .foregroundStyle(.primary)
+                    .fontWeight(.semibold)
+                    .monospacedDigit()
+            } else {
+                Text("換算不可")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 

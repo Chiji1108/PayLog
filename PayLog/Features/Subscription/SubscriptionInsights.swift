@@ -13,6 +13,7 @@ struct SubscriptionInsightSummary {
     let yearlyTotal: Decimal
     let dailyTotal: Decimal
     let rankedSubscriptions: [SubscriptionRankedItem]
+    let paymentMethodGroups: [SubscriptionPaymentMethodGroup]
     let missingCurrencyCounts: [SubscriptionCurrency: Int]
     let totalSubscriptionCount: Int
     let convertedSubscriptionCount: Int
@@ -44,6 +45,64 @@ struct SubscriptionRankedItem: Identifiable {
     }
 
     func amount(for period: SubscriptionInsightPeriod) -> Decimal {
+        switch period {
+        case .day:
+            dailyAmount
+        case .month:
+            monthlyAmount
+        case .year:
+            yearlyAmount
+        }
+    }
+}
+
+struct SubscriptionPaymentMethodGroup: Identifiable {
+    let paymentMethod: SubscriptionPaymentMethod
+    let items: [SubscriptionConvertedItem]
+    let subgroups: [SubscriptionPaymentSourceGroup]
+
+    var id: SubscriptionPaymentMethod { paymentMethod }
+
+    var totalSubscriptionCount: Int { items.count }
+    var convertedSubscriptionCount: Int { items.filter(\.isConverted).count }
+
+    func total(for period: SubscriptionInsightPeriod) -> Decimal {
+        items.reduce(into: .zero) { partialResult, item in
+            partialResult += item.amount(for: period) ?? .zero
+        }
+    }
+}
+
+struct SubscriptionPaymentSourceGroup: Identifiable {
+    let id: String
+    let title: String
+    let items: [SubscriptionConvertedItem]
+
+    var totalSubscriptionCount: Int { items.count }
+    var convertedSubscriptionCount: Int { items.filter(\.isConverted).count }
+
+    func total(for period: SubscriptionInsightPeriod) -> Decimal {
+        items.reduce(into: .zero) { partialResult, item in
+            partialResult += item.amount(for: period) ?? .zero
+        }
+    }
+}
+
+struct SubscriptionConvertedItem: Identifiable {
+    let subscription: SubscriptionItem
+    let dailyAmount: Decimal?
+    let monthlyAmount: Decimal?
+    let yearlyAmount: Decimal?
+
+    var id: PersistentIdentifier {
+        subscription.persistentModelID
+    }
+
+    var isConverted: Bool {
+        yearlyAmount != nil
+    }
+
+    func amount(for period: SubscriptionInsightPeriod) -> Decimal? {
         switch period {
         case .day:
             dailyAmount
@@ -92,6 +151,17 @@ enum SubscriptionInsightPeriod: String, CaseIterable, Identifiable {
             "月額換算で高い順"
         case .year:
             "年額換算で高い順"
+        }
+    }
+
+    var shareUnitLabel: String {
+        switch self {
+        case .day:
+            "日"
+        case .month:
+            "月"
+        case .year:
+            "年"
         }
     }
 }
@@ -144,6 +214,7 @@ enum SubscriptionInsightCalculator {
         let activeSubscriptions = subscriptions.filter(\.isActive)
         var yearlyTotal = Decimal.zero
         var rankedSubscriptions: [SubscriptionRankedItem] = []
+        var convertedItems: [SubscriptionConvertedItem] = []
         var missingCurrencyCounts: [SubscriptionCurrency: Int] = [:]
 
         for subscription in activeSubscriptions {
@@ -151,16 +222,34 @@ enum SubscriptionInsightCalculator {
                 for: subscription,
                 yenRates: yenRates
             ) else {
+                convertedItems.append(
+                    SubscriptionConvertedItem(
+                        subscription: subscription,
+                        dailyAmount: nil,
+                        monthlyAmount: nil,
+                        yearlyAmount: nil
+                    )
+                )
                 missingCurrencyCounts[subscription.currency, default: 0] += 1
                 continue
             }
 
+            let dailyAmount = yearlyAmount / daysPerYear
+            let monthlyAmount = yearlyAmount / monthsPerYear
             yearlyTotal += yearlyAmount
             rankedSubscriptions.append(
                 SubscriptionRankedItem(
                     subscription: subscription,
-                    dailyAmount: yearlyAmount / daysPerYear,
-                    monthlyAmount: yearlyAmount / monthsPerYear,
+                    dailyAmount: dailyAmount,
+                    monthlyAmount: monthlyAmount,
+                    yearlyAmount: yearlyAmount
+                )
+            )
+            convertedItems.append(
+                SubscriptionConvertedItem(
+                    subscription: subscription,
+                    dailyAmount: dailyAmount,
+                    monthlyAmount: monthlyAmount,
                     yearlyAmount: yearlyAmount
                 )
             )
@@ -179,6 +268,7 @@ enum SubscriptionInsightCalculator {
             yearlyTotal: yearlyTotal,
             dailyTotal: yearlyTotal / daysPerYear,
             rankedSubscriptions: rankedSubscriptions,
+            paymentMethodGroups: paymentMethodGroups(from: convertedItems),
             missingCurrencyCounts: missingCurrencyCounts,
             totalSubscriptionCount: activeSubscriptions.count,
             convertedSubscriptionCount: rankedSubscriptions.count
@@ -211,6 +301,92 @@ enum SubscriptionInsightCalculator {
         }
 
         return subscription.yearlyAmount * sourceRate
+    }
+
+    private static func paymentMethodGroups(
+        from items: [SubscriptionConvertedItem]
+    ) -> [SubscriptionPaymentMethodGroup] {
+        SubscriptionPaymentMethod.allCases.compactMap { method in
+            let methodItems = items.filter { $0.subscription.paymentMethod == method }
+            guard !methodItems.isEmpty else {
+                return nil
+            }
+
+            return SubscriptionPaymentMethodGroup(
+                paymentMethod: method,
+                items: sorted(items: methodItems),
+                subgroups: paymentSourceGroups(for: method, items: methodItems)
+            )
+        }
+    }
+
+    private static func paymentSourceGroups(
+        for paymentMethod: SubscriptionPaymentMethod,
+        items: [SubscriptionConvertedItem]
+    ) -> [SubscriptionPaymentSourceGroup] {
+        switch paymentMethod {
+        case .card:
+            return groupedByCard(items)
+        case .bankAccount:
+            return groupedByBank(items)
+        case .invoice, .onSite, .unspecified:
+            return []
+        }
+    }
+
+    private static func groupedByCard(
+        _ items: [SubscriptionConvertedItem]
+    ) -> [SubscriptionPaymentSourceGroup] {
+        let groups = Dictionary(grouping: items) { item in
+            item.subscription.card
+        }
+
+        return groups
+            .map { card, groupItems in
+                SubscriptionPaymentSourceGroup(
+                    id: "card-\(card.map { String(describing: $0.persistentModelID) } ?? "none")",
+                    title: card?.name ?? "カード未設定",
+                    items: sorted(items: groupItems)
+                )
+            }
+            .sorted { lhs, rhs in
+                lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
+            }
+    }
+
+    private static func groupedByBank(
+        _ items: [SubscriptionConvertedItem]
+    ) -> [SubscriptionPaymentSourceGroup] {
+        let groups = Dictionary(grouping: items) { item in
+            item.subscription.bank
+        }
+
+        return groups
+            .map { bank, groupItems in
+                SubscriptionPaymentSourceGroup(
+                    id: "bank-\(bank.map { String(describing: $0.persistentModelID) } ?? "none")",
+                    title: bank?.name ?? "口座未設定",
+                    items: sorted(items: groupItems)
+                )
+            }
+            .sorted { lhs, rhs in
+                lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
+            }
+    }
+
+    private static func sorted(
+        items: [SubscriptionConvertedItem]
+    ) -> [SubscriptionConvertedItem] {
+        items.sorted { lhs, rhs in
+            let lhsAmount = lhs.monthlyAmount ?? .zero
+            let rhsAmount = rhs.monthlyAmount ?? .zero
+
+            if lhsAmount != rhsAmount {
+                return lhsAmount > rhsAmount
+            }
+
+            return lhs.subscription.name.localizedStandardCompare(rhs.subscription.name) == .orderedAscending
+        }
     }
 }
 
