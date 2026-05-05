@@ -16,6 +16,8 @@ struct SubscriptionInsightsView: View {
     @State private var yenRates = SubscriptionInsightSettings.loadYenRates()
     @State private var selectedPeriod: SubscriptionInsightPeriod = .month
     @State private var sharePhoto: SubscriptionInsightsSharePhoto?
+    @State private var selectedPaymentSourceAmount: Double?
+    @State private var selectedSubscriptionAmount: Double?
 
     private let rateFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
@@ -92,24 +94,28 @@ struct SubscriptionInsightsView: View {
                         )
                     } else {
                         ForEach(Array(summary.rankedSubscriptions.enumerated()), id: \.element.id) { index, item in
-                            Label {
-                                LabeledContent {
-                                    Text(
-                                        SubscriptionCurrency.jpy.formattedAmount(
-                                            item.amount(for: selectedPeriod)
+                            NavigationLink {
+                                SubscriptionDetailView(subscription: item.subscription)
+                            } label: {
+                                Label {
+                                    LabeledContent {
+                                        Text(
+                                            SubscriptionCurrency.jpy.formattedAmount(
+                                                item.amount(for: selectedPeriod)
+                                            )
                                         )
-                                    )
-                                        .monospacedDigit()
-                                } label: {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(item.subscription.name)
-                                        Text(item.subscription.amountWithBillingCycleText)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
+                                            .monospacedDigit()
+                                    } label: {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(item.subscription.name)
+                                            Text(item.subscription.amountWithBillingCycleText)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
                                     }
+                                } icon: {
+                                    Text("\(index + 1)")
                                 }
-                            } icon: {
-                                Text("\(index + 1)")
                             }
                         }
                     }
@@ -176,7 +182,8 @@ struct SubscriptionInsightsView: View {
                         title: group.paymentMethod.label,
                         amount: amount,
                         convertedCount: group.convertedSubscriptionCount,
-                        totalCount: group.totalSubscriptionCount
+                        totalCount: group.totalSubscriptionCount,
+                        items: group.items
                     )
                 )
             } else {
@@ -192,7 +199,8 @@ struct SubscriptionInsightsView: View {
                             title: subgroup.title,
                             amount: amount,
                             convertedCount: subgroup.convertedSubscriptionCount,
-                            totalCount: subgroup.totalSubscriptionCount
+                            totalCount: subgroup.totalSubscriptionCount,
+                            items: subgroup.items
                         )
                     )
                 }
@@ -206,6 +214,93 @@ struct SubscriptionInsightsView: View {
 
             return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
         }
+    }
+
+    private var paymentSourceChartSegments: [PaymentSourceChartSegment] {
+        var runningTotal = Double.zero
+
+        return paymentSourceChartItems.map { item in
+            let start = runningTotal
+            let end = start + item.doubleAmount
+            runningTotal = end
+            return PaymentSourceChartSegment(item: item, start: start, end: end)
+        }
+    }
+
+    private var selectedPaymentSourceSegment: PaymentSourceChartSegment? {
+        guard
+            let selectedPaymentSourceAmount,
+            let segment = paymentSourceChartSegments.first(where: { $0.contains(selectedPaymentSourceAmount) })
+        else {
+            return nil
+        }
+
+        return segment
+    }
+
+    private var persistentPaymentSourceSelection: Binding<Double?> {
+        Binding(
+            get: { selectedPaymentSourceAmount },
+            set: { newValue in
+                guard let newValue else { return }
+                selectedPaymentSourceAmount = newValue
+            }
+        )
+    }
+
+    private var persistentSubscriptionSelection: Binding<Double?> {
+        Binding(
+            get: { selectedSubscriptionAmount },
+            set: { newValue in
+                guard let newValue else { return }
+                selectedSubscriptionAmount = newValue
+            }
+        )
+    }
+
+    private var totalAmountText: String {
+        SubscriptionCurrency.jpy.formattedAmount(summary.total(for: selectedPeriod))
+    }
+
+    private func selectedSubscriptionChartItems(
+        for item: PaymentSourceChartItem
+    ) -> [SelectedSubscriptionChartItem] {
+        item.items.compactMap { convertedItem in
+            guard let amount = convertedItem.amount(for: selectedPeriod), amount > 0 else {
+                return nil
+            }
+
+            return SelectedSubscriptionChartItem(
+                id: String(describing: convertedItem.id),
+                title: convertedItem.subscription.name,
+                amount: amount,
+                convertedItem: convertedItem
+            )
+        }
+    }
+
+    private func selectedSubscriptionChartSegments(
+        for item: PaymentSourceChartItem
+    ) -> [SelectedSubscriptionChartSegment] {
+        var runningTotal = Double.zero
+
+        return selectedSubscriptionChartItems(for: item).map { childItem in
+            let start = runningTotal
+            let end = start + childItem.doubleAmount
+            runningTotal = end
+            return SelectedSubscriptionChartSegment(item: childItem, start: start, end: end)
+        }
+    }
+
+    private func selectedSubscriptionSegment(
+        for item: PaymentSourceChartItem
+    ) -> SelectedSubscriptionChartSegment? {
+        guard let selectedSubscriptionAmount else {
+            return nil
+        }
+
+        return selectedSubscriptionChartSegments(for: item)
+            .first(where: { $0.contains(selectedSubscriptionAmount) })
     }
 
     private var totalFooterText: String {
@@ -244,6 +339,21 @@ struct SubscriptionInsightsView: View {
         return totalFooterText
     }
 
+    private var shareCardTitle: String {
+        switch selectedPeriod {
+        case .day:
+            "あなたの1日の固定費は？"
+        case .month:
+            "あなたの毎月の固定費は？"
+        case .year:
+            "あなたの1年の固定費は？"
+        }
+    }
+
+    private var shareCardSubtitle: String {
+        "固定費の支払い元は？"
+    }
+
     @ViewBuilder
     private var paymentSourceChartSection: some View {
         if paymentSourceChartItems.isEmpty {
@@ -253,27 +363,132 @@ struct SubscriptionInsightsView: View {
                 description: Text("為替レートを設定すると支払い元ごとの構成を表示できます。")
             )
         } else {
-            VStack(alignment: .leading, spacing: 16) {
-                VStack(spacing: 4) {
-                    LabeledContent(selectedPeriod.totalTitle) {
-                        Text(SubscriptionCurrency.jpy.formattedAmount(summary.total(for: selectedPeriod)))
-                            .monospacedDigit()
-                    }
+            VStack(spacing: 4) {
+                Chart(paymentSourceChartItems) { item in
+                    let isSelected = selectedPaymentSourceSegment?.item.id == item.id
+                    let hasSelection = selectedPaymentSourceSegment != nil
 
-                    Chart(paymentSourceChartItems) { item in
-                        BarMark(
-                            x: .value("金額", item.doubleAmount),
-                            y: .value("区分", "支払い元"),
-                        )
-                        .foregroundStyle(by: .value("支払い元", item.title))
-                        .accessibilityLabel(item.title)
-                        .accessibilityValue(SubscriptionCurrency.jpy.formattedAmount(item.amount))
+                    SectorMark(
+                        angle: .value("金額", item.doubleAmount),
+                        innerRadius: .ratio(0.62),
+                        outerRadius: isSelected ? .automatic : .inset(12),
+                        angularInset: 1.5
+                    )
+                    .foregroundStyle(by: .value("支払い元", item.title))
+                    .opacity(hasSelection ? (isSelected ? 1 : 0.45) : 1)
+                    .accessibilityLabel(item.title)
+                    .accessibilityValue(SubscriptionCurrency.jpy.formattedAmount(item.amount))
+                }
+                .chartAngleSelection(value: persistentPaymentSourceSelection)
+                .onChange(of: selectedPaymentSourceAmount) { _, newValue in
+                    guard newValue != nil else { return }
+                    selectedSubscriptionAmount = nil
+                }
+                .chartLegend(position: .bottom, alignment: .center)
+                .chartBackground { chartProxy in
+                    GeometryReader { geometry in
+                        if let plotFrame = chartProxy.plotFrame {
+                            let frame = geometry[plotFrame]
+
+                            VStack(spacing: 4) {
+                                Text(selectedPeriod.totalTitle)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Text(totalAmountText)
+                                    .font(.headline.weight(.semibold))
+                                    .monospacedDigit()
+                            }
+                            .position(x: frame.midX, y: frame.midY)
+                        }
                     }
-                    .chartXAxis(.hidden)
-                    .chartYAxis(.hidden)
-                    .frame(height: 80)
+                }
+                .frame(height: 320)
+            }
+
+            if let selectedPaymentSourceSegment {
+                paymentSourceSelectionDetail(selectedPaymentSourceSegment)
+            } else {
+                Text("円グラフを押してなぞると支払い元の詳細を表示できます。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func paymentSourceSelectionDetail(_ segment: PaymentSourceChartSegment) -> some View {
+        let item = segment.item
+        let childChartItems = selectedSubscriptionChartItems(for: item)
+        let selectedSubscriptionSegment = selectedSubscriptionSegment(for: item)
+        
+        VStack(spacing: 4) {
+            if !childChartItems.isEmpty {
+                Chart(childChartItems) { childItem in
+                    let isSelected = selectedSubscriptionSegment?.item.id == childItem.id
+                    let hasSelection = selectedSubscriptionSegment != nil
+
+                    SectorMark(
+                        angle: .value("金額", childItem.doubleAmount),
+                        innerRadius: .ratio(0.62),
+                        outerRadius: isSelected ? .automatic : .inset(12),
+                        angularInset: 1.5
+                    )
+                    .foregroundStyle(by: .value("固定費", childItem.title))
+                    .opacity(hasSelection ? (isSelected ? 1 : 0.45) : 1)
+                    .accessibilityLabel(childItem.title)
+                    .accessibilityValue(SubscriptionCurrency.jpy.formattedAmount(childItem.amount))
+                }
+                .chartAngleSelection(value: persistentSubscriptionSelection)
+                .chartLegend(position: .bottom, alignment: .center)
+                .chartBackground { chartProxy in
+                    GeometryReader { geometry in
+                        if let plotFrame = chartProxy.plotFrame {
+                            let frame = geometry[plotFrame]
+
+                            VStack(spacing: 4) {
+                                Text(item.title)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(2)
+                                Text(SubscriptionCurrency.jpy.formattedAmount(item.amount))
+                                    .font(.headline.weight(.semibold))
+                                    .monospacedDigit()
+                            }
+                            .position(x: frame.midX, y: frame.midY)
+                        }
+                    }
+                }
+                .frame(height: 320)
+            }
+        }
+
+        if let selectedSubscriptionSegment {
+            NavigationLink {
+                SubscriptionDetailView(subscription: selectedSubscriptionSegment.item.convertedItem.subscription)
+            } label: {
+                LabeledContent {
+                    if let amount = selectedSubscriptionSegment.item.convertedItem.amount(for: selectedPeriod) {
+                        Text(SubscriptionCurrency.jpy.formattedAmount(amount))
+                            .monospacedDigit()
+                    } else {
+                        Text("換算不可")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(selectedSubscriptionSegment.item.convertedItem.subscription.name)
+                        Text(selectedSubscriptionSegment.item.convertedItem.subscription.amountWithBillingCycleText)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
+        } else if !childChartItems.isEmpty {
+            Text("内訳の円グラフを押してなぞると固定費の詳細を表示できます。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -300,6 +515,8 @@ struct SubscriptionInsightsView: View {
     private func updateShareImage() {
         let cardView = SubscriptionInsightsShareCard(
             appIcon: shareAppIconImage,
+            title: shareCardTitle,
+            subtitle: shareCardSubtitle,
             selectedPeriodTitle: selectedPeriod.totalTitle,
             totalAmountText: SubscriptionCurrency.jpy.formattedAmount(summary.total(for: selectedPeriod)),
             chartItems: paymentSourceChartItems,
@@ -332,9 +549,59 @@ private struct PaymentSourceChartItem: Identifiable {
     let amount: Decimal
     let convertedCount: Int
     let totalCount: Int
+    let items: [SubscriptionConvertedItem]
 
     var doubleAmount: Double {
         NSDecimalNumber(decimal: amount).doubleValue
+    }
+}
+
+private struct PaymentSourceChartSegment {
+    let item: PaymentSourceChartItem
+    let start: Double
+    let end: Double
+
+    func contains(_ value: Double) -> Bool {
+        value >= start && value <= end
+    }
+
+    func percentage(of total: Decimal) -> Double {
+        let totalValue = NSDecimalNumber(decimal: total).doubleValue
+        guard totalValue > 0 else {
+            return 0
+        }
+
+        return item.doubleAmount / totalValue
+    }
+}
+
+private struct SelectedSubscriptionChartItem: Identifiable {
+    let id: String
+    let title: String
+    let amount: Decimal
+    let convertedItem: SubscriptionConvertedItem
+
+    var doubleAmount: Double {
+        NSDecimalNumber(decimal: amount).doubleValue
+    }
+}
+
+private struct SelectedSubscriptionChartSegment {
+    let item: SelectedSubscriptionChartItem
+    let start: Double
+    let end: Double
+
+    func contains(_ value: Double) -> Bool {
+        value >= start && value <= end
+    }
+
+    func percentage(of total: Decimal) -> Double {
+        let totalValue = NSDecimalNumber(decimal: total).doubleValue
+        guard totalValue > 0 else {
+            return 0
+        }
+
+        return item.doubleAmount / totalValue
     }
 }
 
@@ -349,6 +616,8 @@ private struct SubscriptionInsightsSharePhoto: Transferable {
 
 private struct SubscriptionInsightsShareCard: View {
     let appIcon: Image?
+    let title: String
+    let subtitle: String
     let selectedPeriodTitle: String
     let totalAmountText: String
     let chartItems: [PaymentSourceChartItem]
@@ -358,9 +627,9 @@ private struct SubscriptionInsightsShareCard: View {
         VStack(alignment: .leading, spacing: 24) {
             HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("固定費サマリー")
+                    Text(title)
                         .font(.title.bold())
-                    Text("支払い元ごとの構成")
+                    Text(subtitle)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -393,7 +662,7 @@ private struct SubscriptionInsightsShareCard: View {
                 ContentUnavailableView(
                     "換算できる固定費がありません",
                     systemImage: "chart.pie",
-                    description: Text("為替レートを設定すると支払い元ごとの構成を表示できます。")
+                    description: Text("為替レートを設定すると固定費の支払い元を表示できます。")
                 )
                 .frame(maxWidth: .infinity, minHeight: 320)
             } else {
@@ -532,6 +801,8 @@ private struct ExchangeRateEditorView: View {
 #Preview("Share Card", traits: .sizeThatFitsLayout) {
     SubscriptionInsightsShareCard(
         appIcon: Image("PayLog"),
+        title: "あなたの毎月の固定費は？",
+        subtitle: "固定費の支払い元は？",
         selectedPeriodTitle: "月額換算",
         totalAmountText: "¥18,400",
         chartItems: [
@@ -540,28 +811,32 @@ private struct ExchangeRateEditorView: View {
                 title: "三井住友カード",
                 amount: 8400,
                 convertedCount: 2,
-                totalCount: 2
+                totalCount: 2,
+                items: []
             ),
             PaymentSourceChartItem(
                 id: "bank-main",
                 title: "住信SBIネット銀行",
                 amount: 5200,
                 convertedCount: 1,
-                totalCount: 1
+                totalCount: 1,
+                items: []
             ),
             PaymentSourceChartItem(
                 id: "invoice",
                 title: "請求書払い",
                 amount: 3100,
                 convertedCount: 1,
-                totalCount: 1
+                totalCount: 1,
+                items: []
             ),
             PaymentSourceChartItem(
                 id: "onsite",
                 title: "現地払い",
                 amount: 1700,
                 convertedCount: 1,
-                totalCount: 1
+                totalCount: 1,
+                items: []
             )
         ],
         footerText: "アクティブな固定費 5 件中 4 件を換算しています。"
