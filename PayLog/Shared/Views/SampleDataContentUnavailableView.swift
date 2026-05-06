@@ -42,7 +42,7 @@ struct SampleDataContentUnavailableView: View {
                 Button("キャンセル", role: .cancel) {
                 }
             } message: {
-                Text("既存の銀行口座・カード・電子マネー・固定費を削除し、サンプルデータに入れ替えます。")
+                Text("既存の銀行口座・カード・ウォレット・固定費を削除し、サンプルデータに入れ替えます。")
             }
         }
     }

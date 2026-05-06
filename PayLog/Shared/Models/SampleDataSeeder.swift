@@ -93,13 +93,15 @@ enum SampleDataSeeder {
         let suica = ElectronicMoney(
             name: "Suica",
             notes: "通勤用",
+            fundingSource: .card,
             card: visa,
             createdAt: createdAt(minutesAgo: 80)
         )
         let payPay = ElectronicMoney(
             name: "PayPay",
             notes: "送金用",
-            card: master,
+            fundingSource: .bankAccount,
+            bank: mitsui,
             isActive: true,
             createdAt: createdAt(minutesAgo: 140)
         )
@@ -264,13 +266,15 @@ enum SampleDataSeeder {
         let suica = ElectronicMoney(
             name: "Suica",
             notes: "通勤用",
+            fundingSource: .card,
             card: visa,
             createdAt: createdAt(minutesAgo: 80)
         )
         let payPay = ElectronicMoney(
             name: "PayPay",
             notes: "日常の少額決済",
-            card: master,
+            fundingSource: .bankAccount,
+            bank: mufg,
             createdAt: createdAt(minutesAgo: 140)
         )
 

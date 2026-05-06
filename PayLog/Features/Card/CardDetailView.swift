@@ -94,9 +94,9 @@ struct CardDetailView: View {
                 }
             }
 
-            Section("このカードでチャージする電子マネー") {
+            Section("このカードを入金元にするウォレット") {
                 if sortedElectronicMoneys.isEmpty {
-                    Text("まだ電子マネーはありません")
+                    Text("まだウォレットはありません")
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(sortedElectronicMoneys) { electronicMoney in
@@ -157,7 +157,9 @@ struct CardDetailView: View {
     }
 
     private var sortedElectronicMoneys: [ElectronicMoney] {
-        (card.electronicMoneys ?? []).sortedForDisplay()
+        (card.electronicMoneys ?? [])
+            .filter { $0.fundingSource == .card }
+            .sortedForDisplay()
     }
 
     private var closingEventDraft: CalendarEventDraft? {

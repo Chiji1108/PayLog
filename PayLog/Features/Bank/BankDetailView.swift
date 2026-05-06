@@ -74,6 +74,21 @@ struct BankDetailView: View {
                     }
                 }
             }
+
+            Section("この口座を入金元にするウォレット") {
+                if sortedElectronicMoneys.isEmpty {
+                    Text("まだウォレットはありません")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(sortedElectronicMoneys) { electronicMoney in
+                        NavigationLink {
+                            ElectronicMoneyDetailView(electronicMoney: electronicMoney)
+                        } label: {
+                            ActiveStatusRow(electronicMoney, title: electronicMoney.name)
+                        }
+                    }
+                }
+            }
         }
         .navigationTitle(bank.name)
         .toolbar {
@@ -96,6 +111,12 @@ struct BankDetailView: View {
 
     private var sortedSubscriptions: [SubscriptionItem] {
         (bank.subscriptions ?? []).sortedForDisplay()
+    }
+
+    private var sortedElectronicMoneys: [ElectronicMoney] {
+        (bank.electronicMoneys ?? [])
+            .filter { $0.fundingSource == .bankAccount }
+            .sortedForDisplay()
     }
 }
 #Preview("Bank Detail", traits: .sampleData) {

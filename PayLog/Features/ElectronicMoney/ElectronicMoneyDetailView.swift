@@ -15,22 +15,10 @@ struct ElectronicMoneyDetailView: View {
 
     var body: some View {
         List {
-            Section("電子マネー") {
+            Section("ウォレット") {
                 ActiveStatusLabeledContent(item: electronicMoney)
-
-                if let card = electronicMoney.card {
-                    ActiveStatusLabeledNavigationRow(
-                        "チャージ元カード",
-                        item: card,
-                        title: card.name
-                    ) {
-                        CardDetailView(card: card)
-                    }
-                } else {
-                    LabeledContent("チャージ元カード") {
-                        Text("未設定")
-                    }
-                }
+                LabeledContent("入金方法", value: electronicMoney.fundingSource.label)
+                fundingSourceContent
             }
 
             if let notes = electronicMoney.trimmedNotes {
@@ -51,6 +39,42 @@ struct ElectronicMoneyDetailView: View {
             ElectronicMoneyEditorView(electronicMoney: electronicMoney, onCreate: {
                 dismiss()
             })
+        }
+    }
+
+    @ViewBuilder
+    private var fundingSourceContent: some View {
+        switch electronicMoney.fundingSource {
+        case .card:
+            if let card = electronicMoney.card {
+                ActiveStatusLabeledNavigationRow(
+                    "入金元",
+                    item: card,
+                    title: card.name
+                ) {
+                    CardDetailView(card: card)
+                }
+            } else {
+                LabeledContent("入金元") {
+                    Text("未設定")
+                }
+            }
+        case .bankAccount:
+            if let bank = electronicMoney.bank {
+                ActiveStatusLabeledNavigationRow(
+                    "入金元",
+                    item: bank,
+                    title: bank.name
+                ) {
+                    BankDetailView(bank: bank)
+                }
+            } else {
+                LabeledContent("入金元") {
+                    Text("未設定")
+                }
+            }
+        case .cash, .unspecified:
+            EmptyView()
         }
     }
 }

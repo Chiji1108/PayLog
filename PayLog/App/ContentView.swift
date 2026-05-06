@@ -26,14 +26,14 @@ struct ContentView: View {
                     Label("カード", systemImage: "creditcard")
                 }
 
-            ElectronicMoneyTabView()
-                .tabItem {
-                    Label("電子マネー", systemImage: "iphone.gen3")
-                }
-
             BankTabView()
                 .tabItem {
                     Label("銀行口座", systemImage: "building.columns")
+                }
+
+            ElectronicMoneyTabView()
+                .tabItem {
+                    Label("ウォレット", systemImage: "iphone.gen3")
                 }
         }
         .task {

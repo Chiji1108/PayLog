@@ -36,7 +36,7 @@ struct OnboardingView: View {
                     FeatureCard(
                         systemImage: "square.grid.2x2",
                         title: "まとめて整理",
-                        message: "固定費、カード、電子マネー、銀行口座をまとめて整理・記録できます。"
+                        message: "固定費、カード、銀行口座、ウォレットをまとめて整理・記録できます。"
                     )
 
                     FeatureCard(

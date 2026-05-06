@@ -18,6 +18,7 @@ final class Bank {
     var sortOrder: Int = 0
     var createdAt: Date = Date.now
     @Relationship(deleteRule: .nullify, inverse: \Card.bank) var cards: [Card]?
+    @Relationship(deleteRule: .nullify, inverse: \ElectronicMoney.bank) var electronicMoneys: [ElectronicMoney]?
     @Relationship(deleteRule: .nullify, inverse: \SubscriptionItem.bank) var subscriptions: [SubscriptionItem]?
 
     init(

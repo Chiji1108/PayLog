@@ -19,6 +19,7 @@ struct ElectronicMoneyEditorView: View {
         ]
     ) private var electronicMoneys: [ElectronicMoney]
     @Query(sort: \Card.name) private var cards: [Card]
+    @Query(sort: \Bank.name) private var banks: [Bank]
 
     private let electronicMoney: ElectronicMoney?
     private let onDelete: (() -> Void)?
@@ -26,9 +27,12 @@ struct ElectronicMoneyEditorView: View {
     @State private var name = ""
     @State private var notes = ""
     @State private var isActive = true
+    @State private var fundingSource: ElectronicMoneyFundingSource = .unspecified
     @State private var selectedCardID: PersistentIdentifier?
+    @State private var selectedBankID: PersistentIdentifier?
     @State private var deleteRequest: DeleteRequest<ElectronicMoney>?
     @State private var showingCardSheet = false
+    @State private var showingBankSheet = false
 
     init(
         electronicMoney: ElectronicMoney? = nil,
@@ -41,33 +45,63 @@ struct ElectronicMoneyEditorView: View {
         _name = State(initialValue: electronicMoney?.name ?? "")
         _notes = State(initialValue: electronicMoney?.notes ?? "")
         _isActive = State(initialValue: electronicMoney?.isActive ?? true)
+        _fundingSource = State(initialValue: electronicMoney?.fundingSource ?? .unspecified)
         _selectedCardID = State(initialValue: electronicMoney?.card?.persistentModelID)
+        _selectedBankID = State(initialValue: electronicMoney?.bank?.persistentModelID)
     }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("基本情報") {
-                    TextField("電子マネー名", text: $name)
+                    TextField("ウォレット名", text: $name)
                     Toggle("利用中", isOn: $isActive)
                 }
 
-                Section("チャージ元カード") {
-                    if cards.isEmpty {
-                        RelatedItemCreationPrompt(
-                            message: "利用可能なカードがありません。",
-                            buttonTitle: "カードを追加"
-                        ) {
-                            showingCardSheet = true
+                Section("入金元") {
+                    Picker("方法", selection: $fundingSource) {
+                        ForEach(ElectronicMoneyFundingSource.allCases) { source in
+                            Text(source.label).tag(source)
                         }
-                    } else {
-                        Picker("カード", selection: $selectedCardID) {
-                            Text("未設定").tag(Optional<PersistentIdentifier>.none)
+                    }
 
-                            ForEach(cards) { card in
-                                Text(card.name).tag(Optional(card.persistentModelID))
+                    switch fundingSource {
+                    case .card:
+                        if cards.isEmpty {
+                            RelatedItemCreationPrompt(
+                                message: "利用可能なカードがありません。",
+                                buttonTitle: "カードを追加"
+                            ) {
+                                showingCardSheet = true
+                            }
+                        } else {
+                            Picker("カード", selection: $selectedCardID) {
+                                Text("未設定").tag(Optional<PersistentIdentifier>.none)
+
+                                ForEach(cards) { card in
+                                    Text(card.name).tag(Optional(card.persistentModelID))
+                                }
                             }
                         }
+                    case .bankAccount:
+                        if banks.isEmpty {
+                            RelatedItemCreationPrompt(
+                                message: "利用可能な銀行口座がありません。",
+                                buttonTitle: "銀行口座を追加"
+                            ) {
+                                showingBankSheet = true
+                            }
+                        } else {
+                            Picker("銀行口座", selection: $selectedBankID) {
+                                Text("未設定").tag(Optional<PersistentIdentifier>.none)
+
+                                ForEach(banks) { bank in
+                                    Text(bank.name).tag(Optional(bank.persistentModelID))
+                                }
+                            }
+                        }
+                    case .cash, .unspecified:
+                        EmptyView()
                     }
                 }
 
@@ -78,7 +112,7 @@ struct ElectronicMoneyEditorView: View {
 
                 if electronicMoney != nil {
                     Section("削除") {
-                        Button("電子マネーを削除", role: .destructive) {
+                        Button("ウォレットを削除", role: .destructive) {
                             guard let electronicMoney else {
                                 return
                             }
@@ -89,7 +123,7 @@ struct ElectronicMoneyEditorView: View {
                     }
                 }
             }
-            .navigationTitle(electronicMoney == nil ? "電子マネーを追加" : "電子マネーを編集")
+            .navigationTitle(electronicMoney == nil ? "ウォレットを追加" : "ウォレットを編集")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("キャンセル") {
@@ -103,7 +137,9 @@ struct ElectronicMoneyEditorView: View {
                             let didChangeActiveState = electronicMoney.isActive != isActive
                             electronicMoney.name = trimmedName
                             electronicMoney.notes = trimmedNotes
+                            electronicMoney.fundingSource = fundingSource
                             electronicMoney.card = selectedCard
+                            electronicMoney.bank = selectedBank
                             electronicMoney.isActive = isActive
                             if didChangeActiveState {
                                 electronicMoney.sortOrder = modelContext.nextSortOrder(
@@ -115,7 +151,9 @@ struct ElectronicMoneyEditorView: View {
                             let electronicMoney = ElectronicMoney(
                                 name: trimmedName,
                                 notes: trimmedNotes,
+                                fundingSource: fundingSource,
                                 card: selectedCard,
+                                bank: selectedBank,
                                 isActive: isActive,
                                 sortOrder: modelContext.nextSortOrder(for: ElectronicMoney.self, isActive: isActive)
                             )
@@ -131,6 +169,9 @@ struct ElectronicMoneyEditorView: View {
             .sheet(isPresented: $showingCardSheet) {
                 CardEditorView(onCreateCard: handleCardCreated)
             }
+            .sheet(isPresented: $showingBankSheet) {
+                BankEditorView(onCreateBank: handleBankCreated)
+            }
         }
     }
 
@@ -144,11 +185,27 @@ struct ElectronicMoneyEditorView: View {
     }
 
     private var selectedCard: Card? {
+        guard fundingSource == .card else {
+            return nil
+        }
+
         guard let selectedCardID else {
             return nil
         }
 
         return cards.first { $0.persistentModelID == selectedCardID }
+    }
+
+    private var selectedBank: Bank? {
+        guard fundingSource == .bankAccount else {
+            return nil
+        }
+
+        guard let selectedBankID else {
+            return nil
+        }
+
+        return banks.first { $0.persistentModelID == selectedBankID }
     }
 
     private func deleteElectronicMoney(_ electronicMoney: ElectronicMoney) {
@@ -160,6 +217,12 @@ struct ElectronicMoneyEditorView: View {
 
     private func handleCardCreated(_ card: Card) {
         selectedCardID = card.persistentModelID
+        fundingSource = .card
+    }
+
+    private func handleBankCreated(_ bank: Bank) {
+        selectedBankID = bank.persistentModelID
+        fundingSource = .bankAccount
     }
 }
 

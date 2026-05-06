@@ -29,9 +29,9 @@ struct ElectronicMoneyTabView: View {
             Group {
                 if electronicMoneys.isEmpty {
                     SampleDataContentUnavailableView(
-                        title: "電子マネーがまだありません",
+                        title: "ウォレットがまだありません",
                         systemImage: "iphone.gen3",
-                        description: "カードを登録しておくと、スムーズに追加できます。",
+                        description: "カードや銀行口座を登録しておくと、スムーズに追加できます。",
                         shouldConfirmReplacement: shouldConfirmSampleDataReplacement,
                         applySampleData: applySampleData
                     )
@@ -73,7 +73,7 @@ struct ElectronicMoneyTabView: View {
                     }
                 }
             }
-            .navigationTitle("電子マネー")
+            .navigationTitle("ウォレット")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     EditButton()
@@ -84,7 +84,7 @@ struct ElectronicMoneyTabView: View {
                         Button {
                             showingAddSheet = true
                         } label: {
-                            Label("電子マネーを追加", systemImage: "plus")
+                            Label("ウォレットを追加", systemImage: "plus")
                         }
                     }
                 }
