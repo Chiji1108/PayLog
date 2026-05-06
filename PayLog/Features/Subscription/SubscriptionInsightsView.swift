@@ -561,7 +561,7 @@ private struct SubscriptionInsightsShareCard: View {
 
                     Text("PayLog")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
+//                        .foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
