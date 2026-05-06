@@ -78,7 +78,7 @@ struct SubscriptionInsightsView: View {
                 Section {
                     paymentSourceChartSection
                 } header: {
-                    Text("集計")
+                    Text("支払い元ごとの内訳")
                 } footer: {
                     if summary.hasMissingRates {
                         Text(totalFooterText)
