@@ -17,7 +17,7 @@ struct SubscriptionInsightsView: View {
     @State private var selectedPeriod: SubscriptionInsightPeriod = .month
     @State private var sharePhoto: SubscriptionInsightsSharePhoto?
     @State private var selectedPaymentSourceAmount: Double?
-    @State private var selectedSubscriptionAmount: Double?
+    @State private var isSubscriptionBreakdownExpanded = true
 
     private let rateFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
@@ -248,16 +248,6 @@ struct SubscriptionInsightsView: View {
         )
     }
 
-    private var persistentSubscriptionSelection: Binding<Double?> {
-        Binding(
-            get: { selectedSubscriptionAmount },
-            set: { newValue in
-                guard let newValue else { return }
-                selectedSubscriptionAmount = newValue
-            }
-        )
-    }
-
     private var totalAmountText: String {
         SubscriptionCurrency.jpy.formattedAmount(summary.total(for: selectedPeriod))
     }
@@ -277,30 +267,6 @@ struct SubscriptionInsightsView: View {
                 convertedItem: convertedItem
             )
         }
-    }
-
-    private func selectedSubscriptionChartSegments(
-        for item: PaymentSourceChartItem
-    ) -> [SelectedSubscriptionChartSegment] {
-        var runningTotal = Double.zero
-
-        return selectedSubscriptionChartItems(for: item).map { childItem in
-            let start = runningTotal
-            let end = start + childItem.doubleAmount
-            runningTotal = end
-            return SelectedSubscriptionChartSegment(item: childItem, start: start, end: end)
-        }
-    }
-
-    private func selectedSubscriptionSegment(
-        for item: PaymentSourceChartItem
-    ) -> SelectedSubscriptionChartSegment? {
-        guard let selectedSubscriptionAmount else {
-            return nil
-        }
-
-        return selectedSubscriptionChartSegments(for: item)
-            .first(where: { $0.contains(selectedSubscriptionAmount) })
     }
 
     private var totalFooterText: String {
@@ -351,7 +317,7 @@ struct SubscriptionInsightsView: View {
     }
 
     private var shareCardSubtitle: String {
-        "固定費の支払い元は？"
+        "支払い元ごとの内訳"
     }
 
     @ViewBuilder
@@ -382,7 +348,7 @@ struct SubscriptionInsightsView: View {
                 .chartAngleSelection(value: persistentPaymentSourceSelection)
                 .onChange(of: selectedPaymentSourceAmount) { _, newValue in
                     guard newValue != nil else { return }
-                    selectedSubscriptionAmount = nil
+                    isSubscriptionBreakdownExpanded = true
                 }
                 .chartLegend(position: .bottom, alignment: .center)
                 .chartBackground { chartProxy in
@@ -419,76 +385,39 @@ struct SubscriptionInsightsView: View {
     private func paymentSourceSelectionDetail(_ segment: PaymentSourceChartSegment) -> some View {
         let item = segment.item
         let childChartItems = selectedSubscriptionChartItems(for: item)
-        let selectedSubscriptionSegment = selectedSubscriptionSegment(for: item)
         
-        VStack(spacing: 4) {
-            if !childChartItems.isEmpty {
-                Chart(childChartItems) { childItem in
-                    let isSelected = selectedSubscriptionSegment?.item.id == childItem.id
-                    let hasSelection = selectedSubscriptionSegment != nil
-
-                    SectorMark(
-                        angle: .value("金額", childItem.doubleAmount),
-                        innerRadius: .ratio(0.62),
-                        outerRadius: isSelected ? .automatic : .inset(12),
-                        angularInset: 1.5
-                    )
-                    .foregroundStyle(by: .value("固定費", childItem.title))
-                    .opacity(hasSelection ? (isSelected ? 1 : 0.45) : 1)
-                    .accessibilityLabel(childItem.title)
-                    .accessibilityValue(SubscriptionCurrency.jpy.formattedAmount(childItem.amount))
-                }
-                .chartAngleSelection(value: persistentSubscriptionSelection)
-                .chartLegend(position: .bottom, alignment: .center)
-                .chartBackground { chartProxy in
-                    GeometryReader { geometry in
-                        if let plotFrame = chartProxy.plotFrame {
-                            let frame = geometry[plotFrame]
-
-                            VStack(spacing: 4) {
-                                Text(item.title)
+        if !childChartItems.isEmpty {
+            DisclosureGroup(isExpanded: $isSubscriptionBreakdownExpanded) {
+                ForEach(childChartItems) { childItem in
+                    NavigationLink {
+                        SubscriptionDetailView(subscription: childItem.convertedItem.subscription)
+                    } label: {
+                        LabeledContent {
+                            Text(SubscriptionCurrency.jpy.formattedAmount(childItem.amount))
+                                .monospacedDigit()
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(childItem.convertedItem.subscription.name)
+                                Text(childItem.convertedItem.subscription.amountWithBillingCycleText)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
-                                    .multilineTextAlignment(.center)
-                                    .lineLimit(2)
-                                Text(SubscriptionCurrency.jpy.formattedAmount(item.amount))
-                                    .font(.headline.weight(.semibold))
-                                    .monospacedDigit()
                             }
-                            .position(x: frame.midX, y: frame.midY)
                         }
                     }
                 }
-                .frame(height: 320)
-            }
-        }
-
-        if let selectedSubscriptionSegment {
-            NavigationLink {
-                SubscriptionDetailView(subscription: selectedSubscriptionSegment.item.convertedItem.subscription)
             } label: {
                 LabeledContent {
-                    if let amount = selectedSubscriptionSegment.item.convertedItem.amount(for: selectedPeriod) {
-                        Text(SubscriptionCurrency.jpy.formattedAmount(amount))
-                            .monospacedDigit()
-                    } else {
-                        Text("換算不可")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    Text(SubscriptionCurrency.jpy.formattedAmount(item.amount))
+                        .monospacedDigit()
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(selectedSubscriptionSegment.item.convertedItem.subscription.name)
-                        Text(selectedSubscriptionSegment.item.convertedItem.subscription.amountWithBillingCycleText)
+                        Text(item.title)
+                        Text("\(childChartItems.count)件の固定費")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
             }
-        } else if !childChartItems.isEmpty {
-            Text("内訳の円グラフを押してなぞると固定費の詳細を表示できます。")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
     }
 
@@ -583,25 +512,6 @@ private struct SelectedSubscriptionChartItem: Identifiable {
 
     var doubleAmount: Double {
         NSDecimalNumber(decimal: amount).doubleValue
-    }
-}
-
-private struct SelectedSubscriptionChartSegment {
-    let item: SelectedSubscriptionChartItem
-    let start: Double
-    let end: Double
-
-    func contains(_ value: Double) -> Bool {
-        value >= start && value <= end
-    }
-
-    func percentage(of total: Decimal) -> Double {
-        let totalValue = NSDecimalNumber(decimal: total).doubleValue
-        guard totalValue > 0 else {
-            return 0
-        }
-
-        return item.doubleAmount / totalValue
     }
 }
 
