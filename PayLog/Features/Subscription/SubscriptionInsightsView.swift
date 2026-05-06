@@ -350,7 +350,7 @@ struct SubscriptionInsightsView: View {
                     guard newValue != nil else { return }
                     isSubscriptionBreakdownExpanded = true
                 }
-                .chartLegend(position: .bottom, alignment: .center)
+                .chartLegend(position: .bottom, alignment: .center, spacing: 24)
                 .chartBackground { chartProxy in
                     GeometryReader { geometry in
                         if let plotFrame = chartProxy.plotFrame {
