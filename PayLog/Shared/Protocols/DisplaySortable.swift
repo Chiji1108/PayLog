@@ -51,12 +51,12 @@ extension ModelContext {
         for modelType: Model.Type,
         isActive: Bool
     ) -> Int {
-        let descriptor = FetchDescriptor<Model>(
-            predicate: #Predicate { $0.isActive == isActive },
-            sortBy: [SortDescriptor(\.sortOrder, order: .reverse)]
-        )
-
-        let currentMaxSortOrder = (try? fetch(descriptor).first?.sortOrder) ?? -1
+        let descriptor = FetchDescriptor<Model>()
+        let currentMaxSortOrder = (try? fetch(descriptor))?
+            .lazy
+            .filter { $0.isActive == isActive }
+            .map(\.sortOrder)
+            .max() ?? -1
         return currentMaxSortOrder + 1
     }
 }
