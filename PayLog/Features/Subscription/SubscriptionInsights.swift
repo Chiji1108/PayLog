@@ -211,13 +211,13 @@ enum SubscriptionInsightCalculator {
         subscriptions: [SubscriptionItem],
         yenRates: [SubscriptionCurrency: Decimal]
     ) -> SubscriptionInsightSummary {
-        let activeSubscriptions = subscriptions.filter(\.isActive)
+        let ongoingSubscriptions = subscriptions.filter { $0.isActive && $0.cancellationScheduledDate == nil }
         var yearlyTotal = Decimal.zero
         var rankedSubscriptions: [SubscriptionRankedItem] = []
         var convertedItems: [SubscriptionConvertedItem] = []
         var missingCurrencyCounts: [SubscriptionCurrency: Int] = [:]
 
-        for subscription in activeSubscriptions {
+        for subscription in ongoingSubscriptions {
             guard let yearlyAmount = convertedYearlyAmount(
                 for: subscription,
                 yenRates: yenRates
@@ -270,7 +270,7 @@ enum SubscriptionInsightCalculator {
             rankedSubscriptions: rankedSubscriptions,
             paymentMethodGroups: paymentMethodGroups(from: convertedItems),
             missingCurrencyCounts: missingCurrencyCounts,
-            totalSubscriptionCount: activeSubscriptions.count,
+            totalSubscriptionCount: ongoingSubscriptions.count,
             convertedSubscriptionCount: rankedSubscriptions.count
         )
     }
@@ -280,7 +280,7 @@ enum SubscriptionInsightCalculator {
     ) -> [SubscriptionCurrency] {
         let currencies = Set(
             subscriptions
-                .filter(\.isActive)
+                .filter { $0.isActive && $0.cancellationScheduledDate == nil }
                 .map(\.currency)
                 .filter { $0 != .jpy }
         )
