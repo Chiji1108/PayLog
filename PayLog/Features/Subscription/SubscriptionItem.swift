@@ -235,6 +235,7 @@ final class SubscriptionItem {
     private var currencyCodeRawValue: String = SubscriptionCurrency.jpy.rawValue
     private var paymentMethodRawValue: String?
     var notes: String?
+    var category: String?
     var isActive: Bool = true
     var cancellationScheduledDate: Date?
     var card: Card?
@@ -275,6 +276,11 @@ final class SubscriptionItem {
         set { paymentMethodRawValue = newValue.rawValue }
     }
 
+    var categoryDisplayName: String {
+        let trimmedCategory = category?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmedCategory.isEmpty ? "未分類" : trimmedCategory
+    }
+
     var amountWithBillingCycleText: String {
         billingFrequency.formattedAmount(amount, currency: currency)
     }
@@ -310,6 +316,7 @@ final class SubscriptionItem {
         billingAnchorDate: Date? = nil,
         paymentMethod: SubscriptionPaymentMethod = .unspecified,
         notes: String? = nil,
+        category: String? = nil,
         card: Card? = nil,
         bank: Bank? = nil,
         isActive: Bool = true,
@@ -330,6 +337,8 @@ final class SubscriptionItem {
         self.currencyCodeRawValue = currency.rawValue
         self.paymentMethodRawValue = paymentMethod.rawValue
         self.notes = notes
+        let trimmedCategory = category?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        self.category = trimmedCategory.isEmpty ? nil : trimmedCategory
         self.card = paymentMethod == .card ? card : nil
         self.bank = paymentMethod == .bankAccount ? bank : nil
         self.isActive = isActive

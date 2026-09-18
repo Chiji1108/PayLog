@@ -26,6 +26,7 @@ struct SubscriptionEditorView: View {
     private let onCreate: (() -> Void)?
     private let onCreateSubscription: ((SubscriptionItem) -> Void)?
     @State private var name = ""
+    @State private var category = ""
     @State private var amountText = ""
     @State private var billingInterval = 1
     @State private var billingUnit: SubscriptionBillingUnit = .month
@@ -56,6 +57,7 @@ struct SubscriptionEditorView: View {
         self.onCreate = onCreate
         self.onCreateSubscription = onCreateSubscription
         _name = State(initialValue: subscription?.name ?? initialName ?? "")
+        _category = State(initialValue: subscription?.category ?? "")
         _amountText = State(
             initialValue: Self.editingAmountText(
                 for: subscription?.amount,
@@ -98,6 +100,24 @@ struct SubscriptionEditorView: View {
                     if isActive, cancellationScheduledDate != nil {
                         Text("解約予定日になると、自動的に停止中になります。")
                     }
+                }
+
+                Section {
+                    TextField("カテゴリー", text: $category)
+
+                    if !categorySuggestions.isEmpty {
+                        Menu("既存のカテゴリーから選択") {
+                            ForEach(categorySuggestions, id: \.self) { suggestion in
+                                Button(suggestion) {
+                                    category = suggestion
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("カテゴリー")
+                } footer: {
+                    Text("未入力の場合は「未分類」として集計されます。")
                 }
 
                 Section {
@@ -245,6 +265,7 @@ struct SubscriptionEditorView: View {
                             subscription.billingAnchorDate = normalizedAnchorDate
                             subscription.paymentMethod = paymentMethod
                             subscription.notes = trimmedNotes
+                            subscription.category = trimmedCategory
                             subscription.card = selectedCard
                             subscription.bank = selectedBank
                             subscription.isActive = isActive
@@ -265,6 +286,7 @@ struct SubscriptionEditorView: View {
                                 billingAnchorDate: normalizedAnchorDate,
                                 paymentMethod: paymentMethod,
                                 notes: trimmedNotes,
+                                category: trimmedCategory,
                                 card: selectedCard,
                                 bank: selectedBank,
                                 isActive: isActive,
@@ -301,6 +323,23 @@ struct SubscriptionEditorView: View {
     private var trimmedNotes: String? {
         let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedNotes.isEmpty ? nil : trimmedNotes
+    }
+
+    private var trimmedCategory: String? {
+        let trimmedCategory = category.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedCategory.isEmpty ? nil : trimmedCategory
+    }
+
+    private var categorySuggestions: [String] {
+        Array(
+            Set(
+                subscriptions.compactMap { subscription in
+                    let category = subscription.category?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    return category.isEmpty ? nil : category
+                }
+            )
+        )
+        .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
     private var selectedCard: Card? {

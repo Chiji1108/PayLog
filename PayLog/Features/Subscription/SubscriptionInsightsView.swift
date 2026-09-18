@@ -11,12 +11,33 @@ import SwiftData
 import CoreTransferable
 import UIKit
 
+private enum SubscriptionInsightBreakdown: String, CaseIterable, Identifiable {
+    case category
+    case paymentSource
+
+    var id: Self { self }
+
+    var label: String {
+        switch self {
+        case .category:
+            "カテゴリー"
+        case .paymentSource:
+            "支払い元"
+        }
+    }
+
+    var sectionTitle: String {
+        "\(label)ごとの内訳"
+    }
+}
+
 struct SubscriptionInsightsView: View {
     @Query private var subscriptions: [SubscriptionItem]
     @State private var yenRates = SubscriptionInsightSettings.loadYenRates()
     @State private var selectedPeriod: SubscriptionInsightPeriod = .month
+    @AppStorage("subscriptionInsights.breakdown") private var selectedBreakdown = SubscriptionInsightBreakdown.category
     @State private var sharePhoto: SubscriptionInsightsSharePhoto?
-    @State private var selectedPaymentSourceAmount: Double?
+    @State private var selectedBreakdownAmount: Double?
     @State private var isSubscriptionBreakdownExpanded = true
 
     private let rateFormatter: NumberFormatter = {
@@ -77,9 +98,21 @@ struct SubscriptionInsightsView: View {
                 }
                 
                 Section {
-                    paymentSourceChartSection
+                    Picker("内訳", selection: $selectedBreakdown) {
+                        ForEach(SubscriptionInsightBreakdown.allCases) { breakdown in
+                            Text(breakdown.label).tag(breakdown)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .sensoryFeedback(.selection, trigger: selectedBreakdown)
+                    .onChange(of: selectedBreakdown) { _, _ in
+                        selectedBreakdownAmount = nil
+                        isSubscriptionBreakdownExpanded = true
+                    }
+
+                    breakdownChartSection
                 } header: {
-                    Text("支払い元ごとの内訳")
+                    Text(selectedBreakdown.sectionTitle)
                 } footer: {
                     if summary.hasMissingRates {
                         Text(totalFooterText)
@@ -109,7 +142,10 @@ struct SubscriptionInsightsView: View {
                                     } label: {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(item.subscription.name)
-                                            Text(item.subscription.amountWithBillingCycleText)
+                                            Text(
+                                                "\(item.subscription.categoryDisplayName) ・ "
+                                                    + item.subscription.amountWithBillingCycleText
+                                            )
                                                 .font(.caption)
                                                 .foregroundStyle(.secondary)
                                         }
@@ -170,8 +206,8 @@ struct SubscriptionInsightsView: View {
         SubscriptionInsightCalculator.requiredYenRateCurrencies(subscriptions: subscriptions)
     }
 
-    private var paymentSourceChartItems: [PaymentSourceChartItem] {
-        var items: [PaymentSourceChartItem] = []
+    private var paymentSourceChartItems: [SubscriptionBreakdownChartItem] {
+        var items: [SubscriptionBreakdownChartItem] = []
 
         for group in summary.paymentMethodGroups {
             if group.subgroups.isEmpty {
@@ -181,7 +217,7 @@ struct SubscriptionInsightsView: View {
                 }
 
                 items.append(
-                    PaymentSourceChartItem(
+                    SubscriptionBreakdownChartItem(
                         id: group.paymentMethod.rawValue,
                         title: group.paymentMethod.label,
                         amount: amount,
@@ -198,7 +234,7 @@ struct SubscriptionInsightsView: View {
                     }
 
                     items.append(
-                        PaymentSourceChartItem(
+                        SubscriptionBreakdownChartItem(
                             id: subgroup.id,
                             title: subgroup.title,
                             amount: amount,
@@ -220,21 +256,55 @@ struct SubscriptionInsightsView: View {
         }
     }
 
-    private var paymentSourceChartSegments: [PaymentSourceChartSegment] {
-        var runningTotal = Double.zero
+    private var categoryChartItems: [SubscriptionBreakdownChartItem] {
+        summary.categoryGroups.compactMap { group in
+            let amount = group.total(for: selectedPeriod)
+            guard amount > 0 else {
+                return nil
+            }
 
-        return paymentSourceChartItems.map { item in
-            let start = runningTotal
-            let end = start + item.doubleAmount
-            runningTotal = end
-            return PaymentSourceChartSegment(item: item, start: start, end: end)
+            return SubscriptionBreakdownChartItem(
+                id: group.id,
+                title: group.title,
+                amount: amount,
+                convertedCount: group.convertedSubscriptionCount,
+                totalCount: group.totalSubscriptionCount,
+                items: group.items
+            )
+        }
+        .sorted { lhs, rhs in
+            if lhs.amount != rhs.amount {
+                return lhs.amount > rhs.amount
+            }
+
+            return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
         }
     }
 
-    private var selectedPaymentSourceSegment: PaymentSourceChartSegment? {
+    private var breakdownChartItems: [SubscriptionBreakdownChartItem] {
+        switch selectedBreakdown {
+        case .category:
+            categoryChartItems
+        case .paymentSource:
+            paymentSourceChartItems
+        }
+    }
+
+    private var breakdownChartSegments: [SubscriptionBreakdownChartSegment] {
+        var runningTotal = Double.zero
+
+        return breakdownChartItems.map { item in
+            let start = runningTotal
+            let end = start + item.doubleAmount
+            runningTotal = end
+            return SubscriptionBreakdownChartSegment(item: item, start: start, end: end)
+        }
+    }
+
+    private var selectedBreakdownSegment: SubscriptionBreakdownChartSegment? {
         guard
-            let selectedPaymentSourceAmount,
-            let segment = paymentSourceChartSegments.first(where: { $0.contains(selectedPaymentSourceAmount) })
+            let selectedBreakdownAmount,
+            let segment = breakdownChartSegments.first(where: { $0.contains(selectedBreakdownAmount) })
         else {
             return nil
         }
@@ -242,12 +312,12 @@ struct SubscriptionInsightsView: View {
         return segment
     }
 
-    private var persistentPaymentSourceSelection: Binding<Double?> {
+    private var persistentBreakdownSelection: Binding<Double?> {
         Binding(
-            get: { selectedPaymentSourceAmount },
+            get: { selectedBreakdownAmount },
             set: { newValue in
                 guard let newValue else { return }
-                selectedPaymentSourceAmount = newValue
+                selectedBreakdownAmount = newValue
             }
         )
     }
@@ -257,7 +327,7 @@ struct SubscriptionInsightsView: View {
     }
 
     private func selectedSubscriptionChartItems(
-        for item: PaymentSourceChartItem
+        for item: SubscriptionBreakdownChartItem
     ) -> [SelectedSubscriptionChartItem] {
         item.items.compactMap { convertedItem in
             guard let amount = convertedItem.amount(for: selectedPeriod), amount > 0 else {
@@ -287,12 +357,13 @@ struct SubscriptionInsightsView: View {
     }
 
     private var shareSnapshotIdentifier: String {
-        let itemsToken = paymentSourceChartItems
+        let itemsToken = breakdownChartItems
             .map { "\($0.id):\($0.amount):\($0.convertedCount):\($0.totalCount)" }
             .joined(separator: "|")
 
         return [
             selectedPeriod.rawValue,
+            selectedBreakdown.rawValue,
             "\(summary.total(for: selectedPeriod))",
             "\(summary.totalSubscriptionCount)",
             "\(summary.convertedSubscriptionCount)",
@@ -321,22 +392,22 @@ struct SubscriptionInsightsView: View {
     }
 
     private var shareCardSubtitle: String {
-        "支払い元ごとの内訳"
+        selectedBreakdown.sectionTitle
     }
 
     @ViewBuilder
-    private var paymentSourceChartSection: some View {
-        if paymentSourceChartItems.isEmpty {
+    private var breakdownChartSection: some View {
+        if breakdownChartItems.isEmpty {
             ContentUnavailableView(
                 "換算できる固定費がありません",
                 systemImage: "chart.pie",
-                description: Text("為替レートを設定すると支払い元ごとの構成を表示できます。")
+                description: Text("為替レートを設定すると\(selectedBreakdown.label)ごとの構成を表示できます。")
             )
         } else {
             VStack(spacing: 4) {
-                Chart(paymentSourceChartItems) { item in
-                    let isSelected = selectedPaymentSourceSegment?.item.id == item.id
-                    let hasSelection = selectedPaymentSourceSegment != nil
+                Chart(breakdownChartItems) { item in
+                    let isSelected = selectedBreakdownSegment?.item.id == item.id
+                    let hasSelection = selectedBreakdownSegment != nil
 
                     SectorMark(
                         angle: .value("金額", item.doubleAmount),
@@ -344,17 +415,17 @@ struct SubscriptionInsightsView: View {
                         outerRadius: isSelected ? .automatic : .inset(12),
                         angularInset: 1.5
                     )
-                    .foregroundStyle(by: .value("支払い元", item.title))
+                    .foregroundStyle(by: .value(selectedBreakdown.label, item.title))
                     .opacity(hasSelection ? (isSelected ? 1 : 0.45) : 1)
                     .accessibilityLabel(item.title)
                     .accessibilityValue(SubscriptionCurrency.jpy.formattedAmount(item.amount))
                 }
-                .chartAngleSelection(value: persistentPaymentSourceSelection)
-                .onChange(of: selectedPaymentSourceAmount) { _, newValue in
+                .chartAngleSelection(value: persistentBreakdownSelection)
+                .onChange(of: selectedBreakdownAmount) { _, newValue in
                     guard newValue != nil else { return }
                     isSubscriptionBreakdownExpanded = true
                 }
-                .sensoryFeedback(.selection, trigger: selectedPaymentSourceSegment?.item.id)
+                .sensoryFeedback(.selection, trigger: selectedBreakdownSegment?.item.id)
                 .chartLegend(position: .bottom, alignment: .center, spacing: 24)
                 .chartBackground { chartProxy in
                     GeometryReader { geometry in
@@ -377,10 +448,10 @@ struct SubscriptionInsightsView: View {
                 .padding(.horizontal, 16)
             }
 
-            if let selectedPaymentSourceSegment {
-                paymentSourceSelectionDetail(selectedPaymentSourceSegment)
+            if let selectedBreakdownSegment {
+                breakdownSelectionDetail(selectedBreakdownSegment)
             } else {
-                Text("円グラフを押してなぞると支払い元の詳細を表示できます。")
+                Text("円グラフを押してなぞると\(selectedBreakdown.label)の詳細を表示できます。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -388,7 +459,7 @@ struct SubscriptionInsightsView: View {
     }
 
     @ViewBuilder
-    private func paymentSourceSelectionDetail(_ segment: PaymentSourceChartSegment) -> some View {
+    private func breakdownSelectionDetail(_ segment: SubscriptionBreakdownChartSegment) -> some View {
         let item = segment.item
         let childChartItems = selectedSubscriptionChartItems(for: item)
         
@@ -454,7 +525,7 @@ struct SubscriptionInsightsView: View {
             subtitle: shareCardSubtitle,
             selectedPeriodTitle: selectedPeriod.totalTitle,
             totalAmountText: SubscriptionCurrency.jpy.formattedAmount(summary.total(for: selectedPeriod)),
-            chartItems: paymentSourceChartItems,
+            chartItems: breakdownChartItems,
             footerText: shareCardFooterText
         )
         .frame(width: 720)
@@ -478,7 +549,7 @@ struct SubscriptionInsightsView: View {
     }
 }
 
-private struct PaymentSourceChartItem: Identifiable {
+private struct SubscriptionBreakdownChartItem: Identifiable {
     let id: String
     let title: String
     let amount: Decimal
@@ -491,8 +562,8 @@ private struct PaymentSourceChartItem: Identifiable {
     }
 }
 
-private struct PaymentSourceChartSegment {
-    let item: PaymentSourceChartItem
+private struct SubscriptionBreakdownChartSegment {
+    let item: SubscriptionBreakdownChartItem
     let start: Double
     let end: Double
 
@@ -536,7 +607,7 @@ private struct SubscriptionInsightsShareCard: View {
     let subtitle: String
     let selectedPeriodTitle: String
     let totalAmountText: String
-    let chartItems: [PaymentSourceChartItem]
+    let chartItems: [SubscriptionBreakdownChartItem]
     let footerText: String?
 
     var body: some View {
@@ -578,7 +649,7 @@ private struct SubscriptionInsightsShareCard: View {
                 ContentUnavailableView(
                     "換算できる固定費がありません",
                     systemImage: "chart.pie",
-                    description: Text("為替レートを設定すると固定費の支払い元を表示できます。")
+                    description: Text("為替レートを設定すると固定費の内訳を表示できます。")
                 )
                 .frame(maxWidth: .infinity, minHeight: 320)
             } else {
@@ -589,7 +660,7 @@ private struct SubscriptionInsightsShareCard: View {
                         angularInset: 1.5
                     )
 //                    .cornerRadius(4)
-                    .foregroundStyle(by: .value("支払い元", item.title))
+                    .foregroundStyle(by: .value("内訳", item.title))
                 }
                 .chartLegend(position: .bottom, alignment: .center, spacing: 24)
                 .frame(height: 320)
@@ -719,11 +790,11 @@ private struct ExchangeRateEditorView: View {
     SubscriptionInsightsShareCard(
         appIcon: Image("PayLog"),
         title: "あなたの毎月の固定費は？",
-        subtitle: "固定費の支払い元は？",
+        subtitle: "カテゴリーごとの内訳",
         selectedPeriodTitle: "月額換算",
         totalAmountText: "¥18,400",
         chartItems: [
-            PaymentSourceChartItem(
+            SubscriptionBreakdownChartItem(
                 id: "card-main",
                 title: "三井住友カード",
                 amount: 8400,
@@ -731,7 +802,7 @@ private struct ExchangeRateEditorView: View {
                 totalCount: 2,
                 items: []
             ),
-            PaymentSourceChartItem(
+            SubscriptionBreakdownChartItem(
                 id: "bank-main",
                 title: "住信SBIネット銀行",
                 amount: 5200,
@@ -739,7 +810,7 @@ private struct ExchangeRateEditorView: View {
                 totalCount: 1,
                 items: []
             ),
-            PaymentSourceChartItem(
+            SubscriptionBreakdownChartItem(
                 id: "invoice",
                 title: "請求書払い",
                 amount: 3100,
@@ -747,7 +818,7 @@ private struct ExchangeRateEditorView: View {
                 totalCount: 1,
                 items: []
             ),
-            PaymentSourceChartItem(
+            SubscriptionBreakdownChartItem(
                 id: "onsite",
                 title: "現地払い",
                 amount: 1700,

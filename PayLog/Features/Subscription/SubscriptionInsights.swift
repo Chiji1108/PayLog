@@ -13,6 +13,7 @@ struct SubscriptionInsightSummary {
     let yearlyTotal: Decimal
     let dailyTotal: Decimal
     let rankedSubscriptions: [SubscriptionRankedItem]
+    let categoryGroups: [SubscriptionPaymentSourceGroup]
     let paymentMethodGroups: [SubscriptionPaymentMethodGroup]
     let missingCurrencyCounts: [SubscriptionCurrency: Int]
     let totalSubscriptionCount: Int
@@ -268,6 +269,7 @@ enum SubscriptionInsightCalculator {
             yearlyTotal: yearlyTotal,
             dailyTotal: yearlyTotal / daysPerYear,
             rankedSubscriptions: rankedSubscriptions,
+            categoryGroups: categoryGroups(from: convertedItems),
             paymentMethodGroups: paymentMethodGroups(from: convertedItems),
             missingCurrencyCounts: missingCurrencyCounts,
             totalSubscriptionCount: ongoingSubscriptions.count,
@@ -301,6 +303,24 @@ enum SubscriptionInsightCalculator {
         }
 
         return subscription.yearlyAmount * sourceRate
+    }
+
+    private static func categoryGroups(
+        from items: [SubscriptionConvertedItem]
+    ) -> [SubscriptionPaymentSourceGroup] {
+        Dictionary(grouping: items) { item in
+            item.subscription.categoryDisplayName
+        }
+        .map { category, groupItems in
+            SubscriptionPaymentSourceGroup(
+                id: "category-\(category)",
+                title: category,
+                items: sorted(items: groupItems)
+            )
+        }
+        .sorted { lhs, rhs in
+            lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
+        }
     }
 
     private static func paymentMethodGroups(

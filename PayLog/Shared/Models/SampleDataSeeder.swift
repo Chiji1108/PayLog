@@ -114,6 +114,7 @@ enum SampleDataSeeder {
             billingAnchorDate: anchoredDate(year: currentYear, month: 3, day: 18),
             paymentMethod: .card,
             notes: "家族共有",
+            category: "🎬 娯楽",
             card: visa
         )
         let spotify = SubscriptionItem(
@@ -123,6 +124,7 @@ enum SampleDataSeeder {
             billingUnit: .month,
             billingAnchorDate: anchoredDate(year: currentYear, month: 4, day: 5),
             paymentMethod: .card,
+            category: "🎬 娯楽",
             card: master,
             isActive: false
         )
@@ -133,6 +135,7 @@ enum SampleDataSeeder {
             billingUnit: .month,
             billingAnchorDate: anchoredDate(year: currentYear, month: 4, day: 12),
             paymentMethod: .card,
+            category: "🎬 娯楽",
             card: master,
             isActive: false
         )
@@ -143,7 +146,8 @@ enum SampleDataSeeder {
             billingInterval: 6,
             billingUnit: .week,
             billingAnchorDate: anchoredDate(year: currentYear, month: 4, day: 1),
-            paymentMethod: .onSite
+            paymentMethod: .onSite,
+            category: "🐾 ペット"
         )
         let fixedAssetTax = SubscriptionItem(
             name: "固定資産税",
@@ -154,6 +158,7 @@ enum SampleDataSeeder {
             billingAnchorDate: anchoredDate(year: currentYear, month: 4, day: 30),
             paymentMethod: .bankAccount,
             notes: "実家",
+            category: "🏠 住居",
             bank: mitsui
         )
         let chatGPTPlus = SubscriptionItem(
@@ -164,6 +169,7 @@ enum SampleDataSeeder {
             currency: .usd,
             billingAnchorDate: anchoredDate(year: currentYear, month: 11, day: 30),
             paymentMethod: .card,
+            category: "💼 仕事",
             card: visa
         )
         scheduleCancellation(for: chatGPTPlus, daysAfterNextBilling: 14, referenceDate: now)
@@ -182,6 +188,7 @@ enum SampleDataSeeder {
             billingUnit: .year,
             paymentMethod: .card,
             notes: "請求日は未確認",
+            category: "💳 年会費",
             card: visa
         )
         let mufgAnnualFee = SubscriptionItem(
@@ -191,6 +198,7 @@ enum SampleDataSeeder {
             billingUnit: .year,
             billingAnchorDate: anchoredDate(year: currentYear, month: 9, day: 15),
             paymentMethod: .bankAccount,
+            category: "💳 年会費",
             bank: mufg,
             isActive: false
         )
@@ -296,6 +304,7 @@ enum SampleDataSeeder {
             billingAnchorDate: anchoredDate(year: currentYear, month: 3, day: 18),
             paymentMethod: .card,
             notes: "家族共有",
+            category: "🎬 娯楽",
             card: visa
         )
         let oliveAnnualFee = SubscriptionItem(
@@ -305,6 +314,7 @@ enum SampleDataSeeder {
             billingUnit: .year,
             paymentMethod: .bankAccount,
             notes: "請求日は未確認",
+            category: "💳 年会費",
             bank: mitsui
         )
         let chatGPTPlus = SubscriptionItem(
@@ -315,6 +325,7 @@ enum SampleDataSeeder {
             currency: .usd,
             billingAnchorDate: anchoredDate(year: currentYear, month: 11, day: 30),
             paymentMethod: .card,
+            category: "💼 仕事",
             card: visa
         )
         scheduleCancellation(for: chatGPTPlus, daysAfterNextBilling: 14, referenceDate: now)

@@ -18,6 +18,7 @@ struct SubscriptionDetailView: View {
             Section("固定費") {
                 ActiveStatusLabeledContent(item: subscription)
                 LabeledContent("金額", value: subscription.amountWithBillingCycleText)
+                LabeledContent("カテゴリー", value: subscription.categoryDisplayName)
                 if let billingStatus = subscription.nextBillingStatus,
                    shouldShowBillingStatus(billingStatus) {
                     BillingScheduleProgressView(
