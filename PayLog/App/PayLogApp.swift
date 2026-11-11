@@ -11,8 +11,18 @@ import TipKit
 
 @main
 struct PayLogApp: App {
+    /// App Store 用スクリーンショットの撮影時（UI テストが `-screenshots` 付きで起動）だけ、
+    /// サンプルデータ入りのメモリ内ストアに差し替える。
+    private let screenshotContainer: ModelContainer?
+
     init() {
+        let isTakingScreenshots = ProcessInfo.processInfo.arguments.contains("-screenshots")
+        screenshotContainer = isTakingScreenshots ? PreviewData.makeModelContainer() : nil
+
         do {
+            if isTakingScreenshots {
+                Tips.hideAllTipsForTesting()
+            }
             try Tips.configure()
         } catch {
             assertionFailure("Failed to configure TipKit: \(error.localizedDescription)")
@@ -21,7 +31,12 @@ struct PayLogApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            if let screenshotContainer {
+                ContentView()
+                    .modelContainer(screenshotContainer)
+            } else {
+                ContentView()
+            }
         }
         .modelContainer(for: [
             Bank.self,

@@ -6,8 +6,19 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		C6B5C0072FC3000000A34B8F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C6A3EA8D2F78083400A34B8F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C6A3EA942F78083400A34B8F;
+			remoteInfo = PayLog;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		C6A3EA952F78083400A34B8F /* PayLog.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PayLog.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C6B5C0012FC3000000A34B8F /* PayLogUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PayLogUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -29,10 +40,22 @@
 			path = PayLog;
 			sourceTree = "<group>";
 		};
+		C6B5C0022FC3000000A34B8F /* PayLogUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PayLogUITests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		C6A3EA922F78083400A34B8F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C6B5C0042FC3000000A34B8F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -46,6 +69,7 @@
 			isa = PBXGroup;
 			children = (
 				C6A3EA972F78083400A34B8F /* PayLog */,
+				C6B5C0022FC3000000A34B8F /* PayLogUITests */,
 				C6A3EA962F78083400A34B8F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -54,6 +78,7 @@
 			isa = PBXGroup;
 			children = (
 				C6A3EA952F78083400A34B8F /* PayLog.app */,
+				C6B5C0012FC3000000A34B8F /* PayLogUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -83,6 +108,29 @@
 			productReference = C6A3EA952F78083400A34B8F /* PayLog.app */;
 			productType = "com.apple.product-type.application";
 		};
+		C6B5C0062FC3000000A34B8F /* PayLogUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C6B5C00B2FC3000000A34B8F /* Build configuration list for PBXNativeTarget "PayLogUITests" */;
+			buildPhases = (
+				C6B5C0032FC3000000A34B8F /* Sources */,
+				C6B5C0042FC3000000A34B8F /* Frameworks */,
+				C6B5C0052FC3000000A34B8F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C6B5C0082FC3000000A34B8F /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				C6B5C0022FC3000000A34B8F /* PayLogUITests */,
+			);
+			name = PayLogUITests;
+			packageProductDependencies = (
+			);
+			productName = PayLogUITests;
+			productReference = C6B5C0012FC3000000A34B8F /* PayLogUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -95,6 +143,10 @@
 				TargetAttributes = {
 					C6A3EA942F78083400A34B8F = {
 						CreatedOnToolsVersion = 26.4;
+					};
+					C6B5C0062FC3000000A34B8F = {
+						CreatedOnToolsVersion = 26.4;
+						TestTargetID = C6A3EA942F78083400A34B8F;
 					};
 				};
 			};
@@ -113,12 +165,20 @@
 			projectRoot = "";
 			targets = (
 				C6A3EA942F78083400A34B8F /* PayLog */,
+				C6B5C0062FC3000000A34B8F /* PayLogUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		C6A3EA932F78083400A34B8F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C6B5C0052FC3000000A34B8F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -135,7 +195,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C6B5C0032FC3000000A34B8F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		C6B5C0082FC3000000A34B8F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C6A3EA942F78083400A34B8F /* PayLog */;
+			targetProxy = C6B5C0072FC3000000A34B8F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		C6A3EAA42F78083500A34B8F /* Debug */ = {
@@ -349,6 +424,44 @@
 			};
 			name = Release;
 		};
+		C6B5C0092FC3000000A34B8F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6KC44WPYLJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = tech.chiji.PayLogUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = PayLog;
+			};
+			name = Debug;
+		};
+		C6B5C00A2FC3000000A34B8F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6KC44WPYLJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = tech.chiji.PayLogUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = PayLog;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -366,6 +479,15 @@
 			buildConfigurations = (
 				C6A3EAA42F78083500A34B8F /* Debug */,
 				C6A3EAA52F78083500A34B8F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C6B5C00B2FC3000000A34B8F /* Build configuration list for PBXNativeTarget "PayLogUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C6B5C0092FC3000000A34B8F /* Debug */,
+				C6B5C00A2FC3000000A34B8F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
