@@ -2,6 +2,7 @@
 // 使い方: swift scripts/compose-screenshots.swift <素材ディレクトリ> <出力ディレクトリ>
 //
 // 素材（UI テストが撮ったアプリ画面）に、キャッチコピーと端末フレームを重ねる。
+// 素材と同名の JSON（UI テストが記録した拡大範囲）があれば、その部分を拡大して端末の上に重ねる。
 // 並び順とコピーは下の `shots` で決める。
 
 import AppKit
@@ -43,6 +44,15 @@ let outputDirectory = URL(fileURLWithPath: arguments[2])
 let iconURL = URL(fileURLWithPath: #filePath)
     .deletingLastPathComponent()
     .appendingPathComponent("../PayLog/Assets.xcassets/AppIcon.appiconset/Icon.png")
+
+/// UI テストが記録した拡大範囲。記録のない素材では nil
+func loadHighlight(_ url: URL) -> CGRect? {
+    guard let data = try? Data(contentsOf: url) else { return nil }
+    guard let highlight = try? JSONDecoder().decode(CGRect.self, from: data) else {
+        fatalError("拡大範囲を読み込めない: \(url.path)")
+    }
+    return highlight
+}
 
 func loadImage(_ url: URL) -> CGImage {
     guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
@@ -107,8 +117,9 @@ struct Canvas {
         CTLineDraw(line, context)
     }
 
-    /// 端末フレームに入れたアプリ画面を、画面上端が `top` に来るように描く
-    func phone(_ screen: CGImage, top: CGFloat) {
+    /// 端末フレームに入れたアプリ画面を、画面上端が `top` に来るように描く。
+    /// `highlight`（画面に対する割合）があれば、その部分を拡大して上に重ねる。
+    func phone(_ screen: CGImage, top: CGFloat, highlight: CGRect? = nil) {
         let screenWidth = width * 0.72
         let screenHeight = screenWidth * CGFloat(screen.height) / CGFloat(screen.width)
         let screenX = (width - screenWidth) / 2
@@ -137,6 +148,31 @@ struct Canvas {
             radius: islandHeight / 2,
             color: CGColor(gray: 0, alpha: 1)
         )
+
+        guard let highlight else { return }
+        let crop = CGRect(
+            x: highlight.minX * CGFloat(screen.width),
+            y: highlight.minY * CGFloat(screen.height),
+            width: highlight.width * CGFloat(screen.width),
+            height: highlight.height * CGFloat(screen.height)
+        )
+        guard let zoomed = screen.cropping(to: crop) else {
+            fatalError("拡大範囲が画面の外にある: \(highlight)")
+        }
+        let zoomedWidth = width * 0.92
+        let zoomedHeight = zoomedWidth * crop.height / crop.width
+        let zoomedRect = rect(
+            x: (width - zoomedWidth) / 2,
+            y: top + highlight.midY * screenHeight - zoomedHeight / 2,
+            width: zoomedWidth,
+            height: zoomedHeight
+        )
+        let zoomedRadius = width * 0.045
+        context.saveGState()
+        context.setShadow(offset: CGSize(width: 0, height: -width * 0.012), blur: width * 0.05, color: CGColor(gray: 0, alpha: 0.3))
+        fill(zoomedRect, radius: zoomedRadius, color: CGColor(gray: 1, alpha: 1))
+        context.restoreGState()
+        draw(zoomed, in: zoomedRect, radius: zoomedRadius)
     }
 
     func appIcon(_ icon: CGImage, centerY: CGFloat) {
@@ -165,6 +201,7 @@ try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDir
 
 for (index, shot) in shots.enumerated() {
     let screen = loadImage(rawDirectory.appendingPathComponent("\(shot.source).png"))
+    let highlight = loadHighlight(rawDirectory.appendingPathComponent("\(shot.source).json"))
     let canvas = Canvas(width: screen.width, height: screen.height)
     let unit = canvas.width / 100
 
@@ -180,7 +217,7 @@ for (index, shot) in shots.enumerated() {
 
     switch shot.layout {
     case .phone:
-        canvas.phone(screen, top: unit * 47)
+        canvas.phone(screen, top: unit * 47, highlight: highlight)
     case .icon:
         canvas.appIcon(loadImage(iconURL), centerY: unit * 86)
         canvas.text("PayLog", font: CTFontCreateUIFontForLanguage(.emphasizedSystem, unit * 5, nil)!, centerY: unit * 114)
