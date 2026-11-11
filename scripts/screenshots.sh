@@ -9,7 +9,7 @@ RAW_DIR="$PWD/screenshots/raw"      # アプリ画面の素材
 STORE_DIR="$PWD/screenshots/store"  # コピーと端末フレームを載せた完成画像
 
 mkdir -p "$RAW_DIR" "$STORE_DIR"
-rm -f "$RAW_DIR"/*.png "$STORE_DIR"/*.png
+rm -f "$RAW_DIR"/* "$STORE_DIR"/*
 
 xcrun simctl bootstatus "$DEVICE" -b >/dev/null
 xcrun simctl status_bar "$DEVICE" override \
