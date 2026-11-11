@@ -1,25 +1,25 @@
 #!/bin/bash
-# App Store 用スクリーンショットの素材を撮影して screenshots/ に保存する。
+# App Store 用スクリーンショットを撮影・合成して screenshots/ に保存する。
 # 使い方: scripts/screenshots.sh ["シミュレータ名"]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 DEVICE="${1:-iPhone 18 Pro Max}"
-OUTPUT_DIR="$PWD/screenshots"
+RAW_DIR="$PWD/screenshots/raw"      # アプリ画面の素材
+STORE_DIR="$PWD/screenshots/store"  # コピーと端末フレームを載せた完成画像
 
-mkdir -p "$OUTPUT_DIR"
-rm -f "$OUTPUT_DIR"/*.png
+mkdir -p "$RAW_DIR" "$STORE_DIR"
+rm -f "$RAW_DIR"/*.png "$STORE_DIR"/*.png
 
 xcrun simctl bootstatus "$DEVICE" -b >/dev/null
 xcrun simctl status_bar "$DEVICE" override \
     --time "9:41" --batteryState discharging --batteryLevel 100 --wifiBars 3 --cellularBars 4
 trap 'xcrun simctl status_bar "$DEVICE" clear' EXIT
 
-TEST_RUNNER_SCREENSHOT_DIR="$OUTPUT_DIR" xcodebuild test \
+TEST_RUNNER_SCREENSHOT_DIR="$RAW_DIR" xcodebuild test \
     -scheme PayLog \
     -destination "platform=iOS Simulator,name=$DEVICE" \
     -only-testing:PayLogUITests \
     -quiet
 
-echo "保存先: $OUTPUT_DIR"
-ls "$OUTPUT_DIR"
+swift scripts/compose-screenshots.swift "$RAW_DIR" "$STORE_DIR"
