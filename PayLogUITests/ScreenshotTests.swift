@@ -113,7 +113,8 @@ final class ScreenshotTests: XCTestCase {
 
         if !rows.isEmpty {
             let screen = app.frame
-            let frame = rows.map(cellFrame).reduce(CGRect.null) { $0.union($1) }
+            // 画面の外にはみ出した行は、写っている部分だけを範囲にする
+            let frame = rows.map(cellFrame).reduce(CGRect.null) { $0.union($1) }.intersection(screen)
             let highlight = CGRect(
                 x: frame.minX / screen.width,
                 y: frame.minY / screen.height,
