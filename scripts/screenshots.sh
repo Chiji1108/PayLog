@@ -10,7 +10,7 @@ OUTPUT_DIR="$PWD/screenshots"
 mkdir -p "$OUTPUT_DIR"
 rm -f "$OUTPUT_DIR"/*.png
 
-xcrun simctl boot "$DEVICE" 2>/dev/null || true
+xcrun simctl bootstatus "$DEVICE" -b >/dev/null
 xcrun simctl status_bar "$DEVICE" override \
     --time "9:41" --batteryState discharging --batteryLevel 100 --wifiBars 3 --cellularBars 4
 trap 'xcrun simctl status_bar "$DEVICE" clear' EXIT
