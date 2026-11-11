@@ -83,6 +83,17 @@ enum BillingScheduleCalculator {
         let startOfAnchorDate = calendar.startOfDay(for: anchorDate)
         let startOfReferenceDate = calendar.startOfDay(for: referenceDate)
 
+        // 基準日が未来なら、それが最初の請求日。基準日より前の周期には遡らない。
+        if startOfAnchorDate > startOfReferenceDate {
+            return upcomingAnchorStatus(
+                unit: unit,
+                interval: normalizedInterval,
+                anchorDate: startOfAnchorDate,
+                referenceDate: startOfReferenceDate,
+                calendar: calendar
+            )
+        }
+
         switch unit {
         case .week:
             return weeklyStatus(
@@ -106,6 +117,35 @@ enum BillingScheduleCalculator {
                 calendar: calendar
             )
         }
+    }
+
+    private static func upcomingAnchorStatus(
+        unit: SubscriptionBillingUnit,
+        interval: Int,
+        anchorDate: Date,
+        referenceDate: Date,
+        calendar: Calendar
+    ) -> BillingScheduleStatus? {
+        let anchorComponents = calendar.dateComponents([.year, .month, .day], from: anchorDate)
+        let previousDate: Date? = switch unit {
+        case .week:
+            calendar.date(byAdding: .day, value: -interval * 7, to: anchorDate)
+        case .month:
+            monthlyOccurrence(for: -1, interval: interval, anchorComponents: anchorComponents, calendar: calendar)
+        case .year:
+            yearlyOccurrence(for: -1, interval: interval, anchorComponents: anchorComponents, calendar: calendar)
+        }
+
+        guard let previousDate else {
+            return nil
+        }
+
+        return BillingScheduleStatus(
+            previousDate: previousDate,
+            nextDate: anchorDate,
+            referenceDate: referenceDate,
+            calendar: calendar
+        )
     }
 
     private static func weeklyStatus(

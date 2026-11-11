@@ -38,7 +38,8 @@ enum SampleDataSeeder {
             calendar.date(byAdding: .minute, value: -minutesAgo, to: now) ?? now
         }
 
-        let currentYear = calendar.component(.year, from: now)
+        // 基準日は過去に置く（未来の基準日は「初回請求日」として扱われるため）
+        let anchorYear = calendar.component(.year, from: now) - 1
         let mitsui = Bank(
             name: "三井住友銀行",
             branchName: "渋谷支店",
@@ -111,7 +112,7 @@ enum SampleDataSeeder {
             amount: 1490,
             createdAt: createdAt(minutesAgo: 10),
             billingUnit: .month,
-            billingAnchorDate: anchoredDate(year: currentYear, month: 3, day: 18),
+            billingAnchorDate: anchoredDate(year: anchorYear, month: 3, day: 18),
             paymentMethod: .card,
             notes: "家族共有",
             category: "🎬 娯楽",
@@ -122,7 +123,7 @@ enum SampleDataSeeder {
             amount: 980,
             createdAt: createdAt(minutesAgo: 220),
             billingUnit: .month,
-            billingAnchorDate: anchoredDate(year: currentYear, month: 4, day: 5),
+            billingAnchorDate: anchoredDate(year: anchorYear, month: 4, day: 5),
             paymentMethod: .card,
             category: "🎬 娯楽",
             card: master,
@@ -133,7 +134,7 @@ enum SampleDataSeeder {
             amount: 1280,
             createdAt: createdAt(minutesAgo: 260),
             billingUnit: .month,
-            billingAnchorDate: anchoredDate(year: currentYear, month: 4, day: 12),
+            billingAnchorDate: anchoredDate(year: anchorYear, month: 4, day: 12),
             paymentMethod: .card,
             category: "🎬 娯楽",
             card: master,
@@ -145,7 +146,7 @@ enum SampleDataSeeder {
             createdAt: createdAt(minutesAgo: 30),
             billingInterval: 6,
             billingUnit: .week,
-            billingAnchorDate: anchoredDate(year: currentYear, month: 4, day: 1),
+            billingAnchorDate: anchoredDate(year: anchorYear, month: 4, day: 1),
             paymentMethod: .onSite,
             category: "🐾 ペット"
         )
@@ -155,7 +156,7 @@ enum SampleDataSeeder {
             createdAt: createdAt(minutesAgo: 40),
             billingInterval: 3,
             billingUnit: .month,
-            billingAnchorDate: anchoredDate(year: currentYear, month: 4, day: 30),
+            billingAnchorDate: anchoredDate(year: anchorYear, month: 4, day: 30),
             paymentMethod: .bankAccount,
             notes: "実家",
             category: "🏠 住居",
@@ -167,7 +168,7 @@ enum SampleDataSeeder {
             createdAt: createdAt(minutesAgo: 15),
             billingUnit: .month,
             currency: .usd,
-            billingAnchorDate: anchoredDate(year: currentYear, month: 11, day: 30),
+            billingAnchorDate: anchoredDate(year: anchorYear, month: 11, day: 30),
             paymentMethod: .card,
             category: "💼 仕事",
             card: visa
@@ -196,7 +197,7 @@ enum SampleDataSeeder {
             amount: 1375,
             createdAt: createdAt(minutesAgo: 170),
             billingUnit: .year,
-            billingAnchorDate: anchoredDate(year: currentYear, month: 9, day: 15),
+            billingAnchorDate: anchoredDate(year: anchorYear, month: 9, day: 15),
             paymentMethod: .bankAccount,
             category: "💳 年会費",
             bank: mufg,
@@ -246,7 +247,8 @@ enum SampleDataSeeder {
             calendar.date(byAdding: .minute, value: -minutesAgo, to: now) ?? now
         }
 
-        let currentYear = calendar.component(.year, from: now)
+        // 基準日は過去に置く（未来の基準日は「初回請求日」として扱われるため）
+        let anchorYear = calendar.component(.year, from: now) - 1
         let mitsui = Bank(
             name: "三井住友銀行",
             branchName: "渋谷支店",
@@ -301,7 +303,7 @@ enum SampleDataSeeder {
             amount: 1490,
             createdAt: createdAt(minutesAgo: 10),
             billingUnit: .month,
-            billingAnchorDate: anchoredDate(year: currentYear, month: 3, day: 18),
+            billingAnchorDate: anchoredDate(year: anchorYear, month: 3, day: 18),
             paymentMethod: .card,
             notes: "家族共有",
             category: "🎬 娯楽",
@@ -323,7 +325,7 @@ enum SampleDataSeeder {
             createdAt: createdAt(minutesAgo: 15),
             billingUnit: .month,
             currency: .usd,
-            billingAnchorDate: anchoredDate(year: currentYear, month: 11, day: 30),
+            billingAnchorDate: anchoredDate(year: anchorYear, month: 11, day: 30),
             paymentMethod: .card,
             category: "💼 仕事",
             card: visa
