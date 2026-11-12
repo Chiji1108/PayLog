@@ -166,8 +166,8 @@ struct Canvas {
         context.restoreGState()
     }
 
-    /// 中央揃えの 1 行を、行の中心が `centerY`（左上原点）に来るように描く
-    func text(_ string: String, font: CTFont, centerY: CGFloat) {
+    /// 中央揃えの 1 行を、行の中心が `centerY`（左上原点）に来るように描く。`centerX` を省くとキャンバスの中央に置く
+    func text(_ string: String, font: CTFont, centerY: CGFloat, centerX: CGFloat? = nil) {
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: CGColor(gray: 0.07, alpha: 1),
@@ -175,10 +175,21 @@ struct Canvas {
         let line = CTLineCreateWithAttributedString(NSAttributedString(string: string, attributes: attributes))
         let bounds = CTLineGetBoundsWithOptions(line, .useOpticalBounds)
         context.textPosition = CGPoint(
-            x: (width - bounds.width) / 2 - bounds.minX,
+            x: (centerX ?? width / 2) - bounds.width / 2 - bounds.minX,
             y: height - centerY - CTFontGetCapHeight(font) / 2
         )
         CTLineDraw(line, context)
+    }
+
+    /// 端末フレームの太さ（画面の幅に対する割合）。黒い縁と、その外側の細い枠
+    static let bezelRatio: CGFloat = 0.028
+    static let rimRatio: CGFloat = 0.008
+
+    /// 端末フレームの下端が `bottom` に来るように描く。複数の端末を同じ面に置いたように並べるときに使う
+    func device(_ screen: CGImage, bottom: CGFloat, screenWidth: CGFloat, centerX: CGFloat) {
+        let screenHeight = screenWidth * CGFloat(screen.height) / CGFloat(screen.width)
+        let frame = screenWidth * (Canvas.bezelRatio + Canvas.rimRatio)
+        device(screen, top: bottom - frame - screenHeight, screenWidth: screenWidth, centerX: centerX)
     }
 
     /// 端末フレームに入れたアプリ画面を、画面上端が `top` に来るように描く。
@@ -193,8 +204,8 @@ struct Canvas {
         let screenX = centerX - screenWidth / 2
         // 画面の角の丸み。縦横比が 4:3 に近い iPad は小さい
         let screenRadius = screenWidth * (aspect < 1.4 ? 0.04 : 0.14)
-        let bezel = screenWidth * 0.028
-        let rim = screenWidth * 0.008
+        let bezel = screenWidth * Canvas.bezelRatio
+        let rim = screenWidth * Canvas.rimRatio
 
         let screenRect = rect(x: screenX, y: top, width: screenWidth, height: screenHeight)
         fill(
@@ -332,40 +343,45 @@ for device in devices {
 }
 
 // 商品ページのヘッダ用と検索結果用の横長画像（どちらも任意）。iPhone・iPhone Duo・iPad に対応していることを見せる。
-// 端末によって左右が切り取られるので、コピーと中央の iPad を真ん中に寄せ、左右の端末は切れてもよい飾りにする。
-struct Banner {
-    let name: String
-    let width: Int
-    let height: Int
-    /// レイアウトの基準長（ピクセル）
-    let unit: CGFloat
-}
-
-let banners = [
-    Banner(name: "header", width: 3840, height: 1646, unit: 16.5),
-    Banner(name: "search", width: 3840, height: 2560, unit: 20),
-]
-
+// 端末によって左右が切り取られるので、大事なものは中央に寄せる。
 if let phone, let foldable, let tablet {
-    for banner in banners {
-        let canvas = Canvas(width: banner.width, height: banner.height)
-        let unit = banner.unit
+    let caption = phoneShots[0].caption
 
-        for (lineIndex, line) in phoneShots[0].caption.enumerated() {
+    // 検索結果用（3:2）: 上にコピー、下に 3 台
+    do {
+        let canvas = Canvas(width: 3840, height: 2560)
+        let unit: CGFloat = 20
+        let center = canvas.width / 2
+        for (lineIndex, line) in caption.enumerated() {
             canvas.text(line, font: captionFont(size: unit * 6.4), centerY: unit * (12 + 11 * CGFloat(lineIndex)))
         }
-
-        // 3 台を同じ面に置いたように、下端をそろえて並べる
-        func place(_ screen: CGImage, screenWidth: CGFloat, offsetX: CGFloat) {
-            let screenHeight = screenWidth * CGFloat(screen.height) / CGFloat(screen.width)
-            canvas.device(screen, top: unit * 108 - screenHeight, screenWidth: screenWidth, centerX: canvas.width / 2 + offsetX)
-        }
-        place(phone.screen("card-detail"), screenWidth: unit * 30, offsetX: -unit * 72)
-        place(foldable.screen("subscription-insights"), screenWidth: unit * 32, offsetX: unit * 73)
-        place(tablet.screen("subscriptions"), screenWidth: unit * 96, offsetX: 0)
-
-        canvas.write(to: outputRoot.appendingPathComponent("\(banner.name).png"))
+        canvas.device(phone.screen("card-detail"), bottom: unit * 112, screenWidth: unit * 30, centerX: center - unit * 72)
+        canvas.device(foldable.screen("subscription-insights"), bottom: unit * 112, screenWidth: unit * 32, centerX: center + unit * 73)
+        canvas.device(tablet.screen("subscriptions"), bottom: unit * 112, screenWidth: unit * 96, centerX: center)
+        canvas.write(to: outputRoot.appendingPathComponent("search.png"))
     }
+
+    // ヘッダ用（21:9）: 横長を活かして、左にコピー、右に 3 台。端末は切らずに全体を見せる
+    do {
+        let canvas = Canvas(width: 3840, height: 1646)
+        let width = canvas.width
+        let height = canvas.height
+        for (lineIndex, line) in caption.enumerated() {
+            canvas.text(
+                line,
+                font: captionFont(size: height * 0.06),
+                centerY: height * (0.44 + 0.12 * CGFloat(lineIndex)),
+                centerX: width * 0.22
+            )
+        }
+        // 3 台を同じ面に置いたように、下端をそろえる
+        let baseline = height * 0.79
+        canvas.device(phone.screen("card-detail"), bottom: baseline, screenWidth: width * 0.078, centerX: width * 0.474)
+        canvas.device(tablet.screen("subscriptions"), bottom: baseline, screenWidth: width * 0.302, centerX: width * 0.698)
+        canvas.device(foldable.screen("subscription-insights"), bottom: baseline, screenWidth: width * 0.083, centerX: width * 0.927)
+        canvas.write(to: outputRoot.appendingPathComponent("header.png"))
+    }
+
     print("ヘッダ用と検索結果用の画像: \(outputRoot.path)")
 } else {
     print("ヘッダ用と検索結果用の画像は作らない（iPhone・iPhone Duo・iPad の素材がそろっていない）")
