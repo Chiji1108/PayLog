@@ -166,8 +166,8 @@ struct Canvas {
         context.restoreGState()
     }
 
-    /// 中央揃えの 1 行を、行の中心が `centerY`（左上原点）に来るように描く。`centerX` を省くとキャンバスの中央に置く
-    func text(_ string: String, font: CTFont, centerY: CGFloat, centerX: CGFloat? = nil) {
+    /// 中央揃えの 1 行を、行の中心が `centerY`（左上原点）に来るように描く
+    func text(_ string: String, font: CTFont, centerY: CGFloat) {
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: CGColor(gray: 0.07, alpha: 1),
@@ -175,7 +175,7 @@ struct Canvas {
         let line = CTLineCreateWithAttributedString(NSAttributedString(string: string, attributes: attributes))
         let bounds = CTLineGetBoundsWithOptions(line, .useOpticalBounds)
         context.textPosition = CGPoint(
-            x: (centerX ?? width / 2) - bounds.width / 2 - bounds.minX,
+            x: (width - bounds.width) / 2 - bounds.minX,
             y: height - centerY - CTFontGetCapHeight(font) / 2
         )
         CTLineDraw(line, context)
@@ -343,7 +343,7 @@ for device in devices {
 }
 
 // 商品ページのヘッダ用と検索結果用の横長画像（どちらも任意）。iPhone・iPhone Duo・iPad に対応していることを見せる。
-// 端末によって左右が切り取られるので、大事なものは中央に寄せる。
+// 端末によって左右が切り取られるので、コピーと中央の iPad を真ん中に寄せ、左右の端末は切れてもよい飾りにする。
 if let phone, let foldable, let tablet {
     let caption = phoneShots[0].caption
 
@@ -361,24 +361,17 @@ if let phone, let foldable, let tablet {
         canvas.write(to: outputRoot.appendingPathComponent("search.png"))
     }
 
-    // ヘッダ用（21:9）: 横長を活かして、左にコピー、右に 3 台。端末は切らずに全体を見せる
+    // ヘッダ用（21:9）: 上にコピー、下に 3 台。高さがないので端末を大きく置き、下は切る
     do {
         let canvas = Canvas(width: 3840, height: 1646)
-        let width = canvas.width
-        let height = canvas.height
+        let unit: CGFloat = 16.5
+        let center = canvas.width / 2
         for (lineIndex, line) in caption.enumerated() {
-            canvas.text(
-                line,
-                font: captionFont(size: height * 0.06),
-                centerY: height * (0.44 + 0.12 * CGFloat(lineIndex)),
-                centerX: width * 0.22
-            )
+            canvas.text(line, font: captionFont(size: unit * 6.4), centerY: unit * (12 + 11 * CGFloat(lineIndex)))
         }
-        // 3 台を同じ面に置いたように、下端をそろえる
-        let baseline = height * 0.79
-        canvas.device(phone.screen("card-detail"), bottom: baseline, screenWidth: width * 0.078, centerX: width * 0.474)
-        canvas.device(tablet.screen("subscriptions"), bottom: baseline, screenWidth: width * 0.302, centerX: width * 0.698)
-        canvas.device(foldable.screen("subscription-insights"), bottom: baseline, screenWidth: width * 0.083, centerX: width * 0.927)
+        canvas.device(phone.screen("card-detail"), top: unit * 46, screenWidth: unit * 34, centerX: center - unit * 78)
+        canvas.device(foldable.screen("subscription-insights"), top: unit * 50, screenWidth: unit * 40, centerX: center + unit * 80)
+        canvas.device(tablet.screen("subscriptions"), top: unit * 36, screenWidth: unit * 96)
         canvas.write(to: outputRoot.appendingPathComponent("header.png"))
     }
 
