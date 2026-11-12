@@ -132,7 +132,8 @@ struct Canvas {
         let centerX = centerX ?? width / 2
         let screenHeight = screenWidth * aspect
         let screenX = centerX - screenWidth / 2
-        let screenRadius = screenWidth * 0.14
+        // 画面の角の丸み。縦横比が 4:3 に近い iPad は小さい
+        let screenRadius = screenWidth * (aspect < 1.4 ? 0.04 : 0.14)
         let bezel = screenWidth * 0.028
         let rim = screenWidth * 0.008
 
@@ -179,7 +180,7 @@ struct Canvas {
         let zoomedWidth = screenRect.width * highlight.width * 1.4
         let zoomedHeight = zoomedWidth * crop.height / crop.width
         let zoomedRect = CGRect(
-            x: screenRect.midX - zoomedWidth / 2,
+            x: screenRect.minX + highlight.midX * screenRect.width - zoomedWidth / 2,
             y: screenRect.maxY - highlight.midY * screenRect.height - zoomedHeight / 2,
             width: zoomedWidth,
             height: zoomedHeight

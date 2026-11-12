@@ -52,7 +52,7 @@ final class ScreenshotTests: XCTestCase {
         app.terminate()
         launch(hasCompletedOnboarding: true)
         row("Netflix").tap()
-        app.buttons["編集"].tap()
+        detailEditButton.tap()
         capture("03-subscription-editor", highlighting: ["通貨", "単位", "毎月"])
 
         app.terminate()
@@ -81,8 +81,18 @@ final class ScreenshotTests: XCTestCase {
 
     /// 戻るボタンとタブは、iPhone Duo ではナビゲーションバーやタブバーではなく画面端の列に並ぶ。
     /// どちらの配置でも見つかるよう、置き場所ではなくボタン自体で探す。
+    /// 一覧と詳細が左右に並ぶ表示（iPad など）では、戻るボタンがないので何もしない。
     private func goBack() {
-        app.buttons["BackButton"].firstMatch.tap()
+        let backButton = app.buttons["BackButton"].firstMatch
+        if backButton.exists {
+            backButton.tap()
+        }
+    }
+
+    /// 詳細の「編集」ボタン。一覧と詳細が左右に並ぶ表示では、一覧側にも「編集」があり、詳細側が後ろに並ぶ。
+    private var detailEditButton: XCUIElement {
+        let editButtons = app.buttons.matching(NSPredicate(format: "label == %@", "編集"))
+        return editButtons.element(boundBy: editButtons.count - 1)
     }
 
     private func tab(_ name: String) -> XCUIElement {
