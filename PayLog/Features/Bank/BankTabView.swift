@@ -18,6 +18,7 @@ struct BankTabView: View {
             SortDescriptor(\Bank.name)
         ]
     ) private var banks: [Bank]
+    @State private var selectedBank: Bank?
     @State private var showingAddSheet = false
     @State private var hasCreatedItemInPresentedSheet = false
     @State private var reviewRequestTrigger = 0
@@ -25,7 +26,7 @@ struct BankTabView: View {
     init() {}
 
     var body: some View {
-        NavigationStack {
+        ListDetailSplitView(selection: selectedBank) {
             Group {
                 if banks.isEmpty {
                     SampleDataContentUnavailableView(
@@ -36,13 +37,11 @@ struct BankTabView: View {
                         applySampleData: applySampleData
                     )
                 } else {
-                    List {
+                    List(selection: $selectedBank) {
                         if !activeBanks.isEmpty {
                             Section {
                                 ForEach(activeBanks) { bank in
-                                    NavigationLink {
-                                        BankDetailView(bank: bank)
-                                    } label: {
+                                    NavigationLink(value: bank) {
                                         BankRow(bank: bank)
                                     }
                                     .swipeToDeleteTip(isPresented: bank.id == displayedBanks.first?.id)
@@ -57,9 +56,7 @@ struct BankTabView: View {
                         if !inactiveBanks.isEmpty {
                             Section {
                                 ForEach(inactiveBanks) { bank in
-                                    NavigationLink {
-                                        BankDetailView(bank: bank)
-                                    } label: {
+                                    NavigationLink(value: bank) {
                                         BankRow(bank: bank)
                                     }
                                     .swipeToDeleteTip(isPresented: bank.id == displayedBanks.first?.id)
@@ -103,6 +100,12 @@ struct BankTabView: View {
                     await SwipeToDeleteTip.listReceivedFirstItem.donate()
                 }
             }
+        } detail: {
+            if let selectedBank {
+                BankDetailView(bank: selectedBank)
+            } else {
+                ContentUnavailableView("銀行口座を選択", systemImage: "building.columns")
+            }
         }
         .reviewRequestAfterCreation(trigger: reviewRequestTrigger)
     }
@@ -129,6 +132,9 @@ struct BankTabView: View {
             .map(\.element)
 
         for index in offsets {
+            if banks[index] == selectedBank {
+                selectedBank = nil
+            }
             modelContext.delete(banks[index])
         }
 

@@ -18,6 +18,7 @@ struct CardTabView: View {
             SortDescriptor(\Card.name)
         ]
     ) private var cards: [Card]
+    @State private var selection: CardSelection?
     @State private var showingAddSheet = false
     @State private var hasCreatedItemInPresentedSheet = false
     @State private var reviewRequestTrigger = 0
@@ -25,7 +26,7 @@ struct CardTabView: View {
     init() {}
 
     var body: some View {
-        NavigationStack {
+        ListDetailSplitView(selection: selection) {
             Group {
                 if cards.isEmpty {
                     SampleDataContentUnavailableView(
@@ -36,13 +37,11 @@ struct CardTabView: View {
                         applySampleData: applySampleData
                     )
                 } else {
-                    List {
+                    List(selection: $selection) {
                         if !activeCards.isEmpty {
                             Section {
                                 ForEach(activeCards) { card in
-                                    NavigationLink {
-                                        CardDetailView(card: card)
-                                    } label: {
+                                    NavigationLink(value: CardSelection.card(card)) {
                                         CardRow(card: card)
                                     }
                                     .swipeToDeleteTip(isPresented: card.id == displayedCards.first?.id)
@@ -57,9 +56,7 @@ struct CardTabView: View {
                         if !inactiveCards.isEmpty {
                             Section {
                                 ForEach(inactiveCards) { card in
-                                    NavigationLink {
-                                        CardDetailView(card: card)
-                                    } label: {
+                                    NavigationLink(value: CardSelection.card(card)) {
                                         CardRow(card: card)
                                     }
                                     .swipeToDeleteTip(isPresented: card.id == displayedCards.first?.id)
@@ -81,8 +78,8 @@ struct CardTabView: View {
 
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     EditModeDisabledToolbarContent {
-                        NavigationLink {
-                            CardNotificationSettingsView()
+                        Button {
+                            selection = .notificationSettings
                         } label: {
                             Label("通知設定", systemImage: "bell")
                         }
@@ -108,6 +105,15 @@ struct CardTabView: View {
                 Task {
                     await SwipeToDeleteTip.listReceivedFirstItem.donate()
                 }
+            }
+        } detail: {
+            switch selection {
+            case let .card(card):
+                CardDetailView(card: card)
+            case .notificationSettings:
+                CardNotificationSettingsView()
+            case nil:
+                ContentUnavailableView("カードを選択", systemImage: "creditcard")
             }
         }
         .reviewRequestAfterCreation(trigger: reviewRequestTrigger)
@@ -137,6 +143,9 @@ struct CardTabView: View {
             .map(\.element)
 
         for index in offsets {
+            if selection == .card(cards[index]) {
+                selection = nil
+            }
             modelContext.delete(cards[index])
         }
 
@@ -191,6 +200,12 @@ struct CardTabView: View {
     private func saveModelContext() {
         try? modelContext.save()
     }
+}
+
+/// 詳細側に表示するもの
+private enum CardSelection: Hashable {
+    case card(Card)
+    case notificationSettings
 }
 
 private struct CardRow: View {
