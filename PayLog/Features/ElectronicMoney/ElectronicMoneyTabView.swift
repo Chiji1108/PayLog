@@ -26,7 +26,7 @@ struct ElectronicMoneyTabView: View {
     init() {}
 
     var body: some View {
-        ListDetailSplitView(selection: selectedElectronicMoney) {
+        ListDetailSplitView(selection: $selectedElectronicMoney) {
             Group {
                 if electronicMoneys.isEmpty {
                     SampleDataContentUnavailableView(
