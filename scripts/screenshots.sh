@@ -6,18 +6,19 @@ cd "$(dirname "$0")/.."
 
 # App Store Connect が受け付けるサイズの端末:
 # iPhone 18 Pro は 6.3 インチ（1206×2622）、iPhone Duo は外側の画面（1398×2034）、
-# iPad Pro 13-inch (M5) は 13 インチ（2064×2752）
+# iPad Pro 13-inch (M5) は 13 インチ（横向きで 2752×2064）
 # iPhone Duo は閉じた状態で撮る（開いていると、消灯した外側の画面が写る）
 if [ $# -eq 0 ]; then
     set -- "iPhone 18 Pro" "iPhone Duo" "iPad Pro 13-inch (M5)"
 fi
 
-for DEVICE in "$@"; do
-    RAW_DIR="$PWD/screenshots/raw/$DEVICE"      # アプリ画面の素材
-    STORE_DIR="$PWD/screenshots/store/$DEVICE"  # コピーと端末フレームを載せた完成画像
+RAW_ROOT="$PWD/screenshots/raw"      # アプリ画面の素材（端末ごと）
+STORE_ROOT="$PWD/screenshots/store"  # コピーと端末フレームを載せた完成画像（端末ごと）
 
-    rm -rf "$RAW_DIR" "$STORE_DIR"
-    mkdir -p "$RAW_DIR" "$STORE_DIR"
+for DEVICE in "$@"; do
+    RAW_DIR="$RAW_ROOT/$DEVICE"
+    rm -rf "$RAW_DIR"
+    mkdir -p "$RAW_DIR"
 
     xcrun simctl bootstatus "$DEVICE" -b >/dev/null
     xcrun simctl status_bar "$DEVICE" override \
@@ -31,5 +32,8 @@ for DEVICE in "$@"; do
         -quiet
 
     xcrun simctl status_bar "$DEVICE" clear
-    swift scripts/compose-screenshots.swift "$RAW_DIR" "$STORE_DIR"
 done
+
+# 完成画像は、素材のある端末すべてについて作り直す（iPad の 1 枚とヘッダ用の画像は、複数の端末の素材を使う）
+rm -rf "$STORE_ROOT"
+swift scripts/compose-screenshots.swift "$RAW_ROOT" "$STORE_ROOT"

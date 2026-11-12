@@ -1,9 +1,10 @@
 // App Store 用の完成画像を合成する。
-// 使い方: swift scripts/compose-screenshots.swift <素材ディレクトリ> <出力ディレクトリ>
+// 使い方: swift scripts/compose-screenshots.swift <素材のルート> <出力のルート>
 //
-// 素材（UI テストが撮ったアプリ画面）に、キャッチコピーと端末フレームを重ねる。
+// 素材のルートには、端末ごとのディレクトリ（UI テストが撮ったアプリ画面）が並ぶ。
+// 素材に、キャッチコピーと端末フレームを重ねる。
 // 素材と同名の JSON（UI テストが記録した拡大範囲）があれば、その部分を拡大して端末の上に重ねる。
-// 並び順とコピーは下の `shots` で決める。
+// 並び順とコピーは下の `phoneShots` と `tabletShots` で決める。
 
 import AppKit
 import CoreText
@@ -13,34 +14,47 @@ import UniformTypeIdentifiers
 struct Shot {
     enum Layout {
         /// コピーの下に端末全体を置く
-        case phone
+        case device
         /// コピー、アプリアイコン、下から覗く端末
         case icon
+        /// コピー、アプリアイコン、下から覗く iPad と iPhone
+        case iconWithPhone
     }
 
     let source: String
     let caption: [String]
-    var layout: Layout = .phone
+    var layout: Layout = .device
 }
 
-let shots = [
-    Shot(source: "01-subscriptions", caption: ["サブスクだけじゃない。", "クレカも銀行も、まとめて整理"]),
-    Shot(source: "02-subscription-detail", caption: ["支払い方法と、ひもづく。", "クレカも口座振替も請求書も"]),
-    Shot(source: "06-card-detail", caption: ["このクレカ、どこで使ってる？", "ひと目でわかる"]),
-    Shot(source: "05-subscriptions-inactive", caption: ["利用中、停止中、解約予定も。", "未来、過去、現在の記録を残せる"]),
-    Shot(source: "08-bank-detail", caption: ["いざという時にも、困らない。", "大切な情報を、きちんと残す"]),
-    Shot(source: "07-card-notifications", caption: ["クレカのうっかりを防ぐ。", "締め日・引き落とし日を通知"]),
-    Shot(source: "03-subscription-editor", caption: ["もちろんサブスク管理も充実。", "お好きな通貨と周期で"]),
-    Shot(source: "04-subscription-insights", caption: ["あなたの固定費の内訳は？", "サブスク集計もおまかせあれ"]),
-    Shot(source: "09-onboarding", caption: ["iCloudに自動バックアップ。", "ログイン不要、データ収集なし"], layout: .icon),
+/// iPhone と iPhone Duo（外側の画面）の並び
+let phoneShots = [
+    Shot(source: "subscriptions", caption: ["サブスクだけじゃない。", "クレカも銀行も、まとめて整理"]),
+    Shot(source: "subscription-insights", caption: ["あなたの固定費の内訳は？", "カテゴリーごとに、ひと目で"]),
+    Shot(source: "subscription-detail", caption: ["支払い方法と、ひもづく。", "クレカも口座振替も請求書も"]),
+    Shot(source: "card-detail", caption: ["このクレカ、どこで使ってる？", "ひと目でわかる"]),
+    Shot(source: "card-notifications", caption: ["クレカのうっかりを防ぐ。", "締め日・引き落とし日を通知"]),
+    Shot(source: "subscriptions-inactive", caption: ["利用中、停止中、解約予定も。", "未来、過去、現在の記録を残せる"]),
+    Shot(source: "bank-detail", caption: ["いざという時にも、困らない。", "大切な情報を、きちんと残す"]),
+    Shot(source: "subscription-editor", caption: ["もちろんサブスク管理も充実。", "お好きな通貨と周期で"]),
+    Shot(source: "onboarding", caption: ["iCloudに自動バックアップ。", "ログイン不要、データ収集なし"], layout: .icon),
+]
+
+/// iPad（横向き）の並び。一覧と詳細が 1 枚に収まるので、枚数が少ない
+let tabletShots = [
+    Shot(source: "subscriptions", caption: ["サブスクだけじゃない。", "クレカも銀行も、まとめて整理"]),
+    Shot(source: "subscription-insights", caption: ["あなたの固定費の内訳は？", "カテゴリーごとに、ひと目で"]),
+    Shot(source: "card-detail", caption: ["このクレカ、どこで使ってる？", "ひと目でわかる"]),
+    Shot(source: "card-notifications", caption: ["クレカのうっかりを防ぐ。", "締め日・引き落とし日を通知"]),
+    Shot(source: "bank-detail", caption: ["いざという時にも、困らない。", "大切な情報を、きちんと残す"]),
+    Shot(source: "subscriptions", caption: ["iCloudに自動バックアップ。", "iPhoneでもiPadでも"], layout: .iconWithPhone),
 ]
 
 let arguments = CommandLine.arguments
 guard arguments.count == 3 else {
-    fatalError("usage: compose-screenshots.swift <raw-dir> <output-dir>")
+    fatalError("usage: compose-screenshots.swift <raw-root> <output-root>")
 }
-let rawDirectory = URL(fileURLWithPath: arguments[1])
-let outputDirectory = URL(fileURLWithPath: arguments[2])
+let rawRoot = URL(fileURLWithPath: arguments[1])
+let outputRoot = URL(fileURLWithPath: arguments[2])
 let iconURL = URL(fileURLWithPath: #filePath)
     .deletingLastPathComponent()
     .appendingPathComponent("../PayLog/Assets.xcassets/AppIcon.appiconset/Icon.png")
@@ -54,12 +68,57 @@ func loadHighlight(_ url: URL) -> CGRect? {
     return highlight
 }
 
+/// 画像を、記録された向きのとおりに読み込む（横向きで撮った iPad の素材は、縦向きの画像に向きの情報が付く）
 func loadImage(_ url: URL) -> CGImage {
     guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-          let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+          let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+          let width = properties[kCGImagePropertyPixelWidth] as? Int,
+          let height = properties[kCGImagePropertyPixelHeight] as? Int,
+          let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+              kCGImageSourceCreateThumbnailFromImageAlways: true,
+              kCGImageSourceCreateThumbnailWithTransform: true,
+              kCGImageSourceThumbnailMaxPixelSize: max(width, height),
+          ] as CFDictionary) else {
         fatalError("画像を読み込めない: \(url.path)")
     }
     return image
+}
+
+/// 端末ごとの素材。端末の種類は、画面の形で見分ける。
+struct Device {
+    enum Kind {
+        /// 縦長の iPhone
+        case phone
+        /// iPhone Duo の外側の画面
+        case foldable
+        /// 横向きの iPad
+        case tablet
+    }
+
+    let name: String
+    let directory: URL
+    let kind: Kind
+
+    init(directory: URL) {
+        self.directory = directory
+        name = directory.lastPathComponent
+        let screen = loadImage(directory.appendingPathComponent("subscriptions.png"))
+        if screen.width > screen.height {
+            kind = .tablet
+        } else if screen.height > screen.width * 2 {
+            kind = .phone
+        } else {
+            kind = .foldable
+        }
+    }
+
+    func screen(_ source: String) -> CGImage {
+        loadImage(directory.appendingPathComponent("\(source).png"))
+    }
+
+    func highlight(_ source: String) -> CGRect? {
+        loadHighlight(directory.appendingPathComponent("\(source).json"))
+    }
 }
 
 /// 左上原点の座標で描くためのキャンバス。出力は素材と同じピクセルサイズ・アルファなし。
@@ -125,7 +184,7 @@ struct Canvas {
     /// 端末フレームに入れたアプリ画面を、画面上端が `top` に来るように描く。
     /// `highlight`（画面に対する割合）があれば、その部分を拡大して上に重ねる。
     /// `screenWidth` と `centerX` を省くと、キャンバス中央に幅の 72% で置く。
-    func phone(_ screen: CGImage, top: CGFloat, screenWidth: CGFloat? = nil, centerX: CGFloat? = nil, highlight: CGRect? = nil) {
+    func device(_ screen: CGImage, top: CGFloat, screenWidth: CGFloat? = nil, centerX: CGFloat? = nil, highlight: CGRect? = nil) {
         let aspect = CGFloat(screen.height) / CGFloat(screen.width)
         // 既定の幅は、端末の下端がキャンバスに収まる範囲で最大 72%（画面の短い iPhone Duo は小さくなる）
         let screenWidth = screenWidth ?? min(width * 0.72, (height - top - width * 0.06) / aspect)
@@ -185,9 +244,14 @@ struct Canvas {
             width: zoomedWidth,
             height: zoomedHeight
         )
-        let zoomedRadius = width * 0.045
+        // 角の丸みは端末の大きさに合わせる。行の低い iPad では、丸くなりすぎないよう高さでも抑える
+        let zoomedRadius = min(screenRect.width * 0.0625, zoomedHeight * 0.2)
         context.saveGState()
-        context.setShadow(offset: CGSize(width: 0, height: -width * 0.012), blur: width * 0.05, color: CGColor(gray: 0, alpha: 0.3))
+        context.setShadow(
+            offset: CGSize(width: 0, height: -screenRect.width * 0.017),
+            blur: screenRect.width * 0.07,
+            color: CGColor(gray: 0, alpha: 0.3)
+        )
         fill(zoomedRect, radius: zoomedRadius, color: CGColor(gray: 1, alpha: 1))
         context.restoreGState()
         draw(zoomed, in: zoomedRect, radius: zoomedRadius)
@@ -214,35 +278,60 @@ struct Canvas {
     }
 }
 
-try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+let devices = try FileManager.default
+    .contentsOfDirectory(at: rawRoot, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)
+    .filter(\.hasDirectoryPath)
+    .sorted { $0.lastPathComponent < $1.lastPathComponent }
+    .map(Device.init)
+let phone = devices.first { $0.kind == .phone }
+let foldable = devices.first { $0.kind == .foldable }
+let tablet = devices.first { $0.kind == .tablet }
 
-for (index, shot) in shots.enumerated() {
-    let screen = loadImage(rawDirectory.appendingPathComponent("\(shot.source).png"))
-    let highlight = loadHighlight(rawDirectory.appendingPathComponent("\(shot.source).json"))
-    let canvas = Canvas(width: screen.width, height: screen.height)
-    let unit = canvas.width / 100
-
-    let captionFont = CTFontCreateWithName("HiraginoSans-W7" as CFString, unit * 5.4, nil)
-    for (lineIndex, line) in shot.caption.enumerated() {
-        canvas.text(line, font: captionFont, centerY: unit * (18 + 10.4 * CGFloat(lineIndex)))
-    }
-
-    switch shot.layout {
-    case .phone:
-        canvas.phone(screen, top: unit * 47, highlight: highlight)
-    case .icon:
-        // 画面の縦横比が違う端末でも収まるよう、キャンバスの高さに対する割合で置く
-        let height = canvas.height
-        canvas.appIcon(loadImage(iconURL), centerY: height * 0.396, size: height * 0.184)
-        canvas.text("PayLog", font: CTFontCreateUIFontForLanguage(.emphasizedSystem, height * 0.023, nil)!, centerY: height * 0.525)
-        canvas.phone(screen, top: height * 0.7, screenWidth: canvas.width * 0.72)
-    }
-
-    canvas.write(to: outputDirectory.appendingPathComponent(String(format: "%02d.png", index + 1)))
+func captionFont(size: CGFloat) -> CTFont {
+    CTFontCreateWithName("HiraginoSans-W7" as CFString, size, nil)
 }
 
-// 商品ページのヘッダ用と検索結果用の横長画像（どちらも任意）。
-// 端末によって左右が切り取られるので、コピーと中央の端末を真ん中に寄せ、左右の端末は切れてもよい飾りにする。
+for device in devices {
+    let outputDirectory = outputRoot.appendingPathComponent(device.name)
+    try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+
+    let shots = device.kind == .tablet ? tabletShots : phoneShots
+    for (index, shot) in shots.enumerated() {
+        let screen = device.screen(shot.source)
+        let canvas = Canvas(width: screen.width, height: screen.height)
+        // レイアウトの基準長。横向きのキャンバスでは、高さに収まるよう小さくする
+        let unit = min(canvas.width, canvas.height * 0.6) / 100
+        let height = canvas.height
+
+        for (lineIndex, line) in shot.caption.enumerated() {
+            canvas.text(line, font: captionFont(size: unit * 5.4), centerY: unit * (18 + 10.4 * CGFloat(lineIndex)))
+        }
+
+        switch shot.layout {
+        case .device:
+            canvas.device(screen, top: unit * 47, highlight: device.highlight(shot.source))
+        case .icon:
+            // 画面の縦横比が違う端末でも収まるよう、キャンバスの高さに対する割合で置く
+            canvas.appIcon(loadImage(iconURL), centerY: height * 0.396, size: height * 0.184)
+            canvas.text("PayLog", font: CTFontCreateUIFontForLanguage(.emphasizedSystem, height * 0.023, nil)!, centerY: height * 0.525)
+            canvas.device(screen, top: height * 0.7, screenWidth: canvas.width * 0.72)
+        case .iconWithPhone:
+            guard let phone else {
+                fatalError("\(device.name) の完成画像には、iPhone の素材も必要")
+            }
+            canvas.appIcon(loadImage(iconURL), centerY: height * 0.4, size: height * 0.2)
+            canvas.text("PayLog", font: CTFontCreateUIFontForLanguage(.emphasizedSystem, height * 0.03, nil)!, centerY: height * 0.55)
+            canvas.device(screen, top: height * 0.66, screenWidth: canvas.width * 0.5, centerX: canvas.width * 0.42)
+            canvas.device(phone.screen("subscriptions"), top: height * 0.7, screenWidth: canvas.width * 0.13, centerX: canvas.width * 0.8)
+        }
+
+        canvas.write(to: outputDirectory.appendingPathComponent(String(format: "%02d.png", index + 1)))
+    }
+    print("完成画像: \(outputDirectory.path)")
+}
+
+// 商品ページのヘッダ用と検索結果用の横長画像（どちらも任意）。iPhone・iPhone Duo・iPad に対応していることを見せる。
+// 端末によって左右が切り取られるので、コピーと中央の iPad を真ん中に寄せ、左右の端末は切れてもよい飾りにする。
 struct Banner {
     let name: String
     let width: Int
@@ -256,21 +345,22 @@ let banners = [
     Banner(name: "search", width: 3840, height: 2560, unit: 20),
 ]
 
-for banner in banners {
-    let canvas = Canvas(width: banner.width, height: banner.height)
-    let unit = banner.unit
-    let screen = { (name: String) in loadImage(rawDirectory.appendingPathComponent("\(name).png")) }
+if let phone, let foldable, let tablet {
+    for banner in banners {
+        let canvas = Canvas(width: banner.width, height: banner.height)
+        let unit = banner.unit
 
-    let captionFont = CTFontCreateWithName("HiraginoSans-W7" as CFString, unit * 6.4, nil)
-    for (lineIndex, line) in shots[0].caption.enumerated() {
-        canvas.text(line, font: captionFont, centerY: unit * (12 + 11 * CGFloat(lineIndex)))
+        for (lineIndex, line) in phoneShots[0].caption.enumerated() {
+            canvas.text(line, font: captionFont(size: unit * 6.4), centerY: unit * (12 + 11 * CGFloat(lineIndex)))
+        }
+
+        canvas.device(phone.screen("card-detail"), top: unit * 46, screenWidth: unit * 34, centerX: canvas.width / 2 - unit * 74)
+        canvas.device(foldable.screen("subscription-insights"), top: unit * 50, screenWidth: unit * 36, centerX: canvas.width / 2 + unit * 75)
+        canvas.device(tablet.screen("subscriptions"), top: unit * 36, screenWidth: unit * 96)
+
+        canvas.write(to: outputRoot.appendingPathComponent("\(banner.name).png"))
     }
-
-    canvas.phone(screen("06-card-detail"), top: unit * 46, screenWidth: unit * 44, centerX: canvas.width / 2 - unit * 62)
-    canvas.phone(screen("08-bank-detail"), top: unit * 46, screenWidth: unit * 44, centerX: canvas.width / 2 + unit * 62)
-    canvas.phone(screen("01-subscriptions"), top: unit * 36, screenWidth: unit * 52)
-
-    canvas.write(to: outputDirectory.appendingPathComponent("\(banner.name).png"))
+    print("ヘッダ用と検索結果用の画像: \(outputRoot.path)")
+} else {
+    print("ヘッダ用と検索結果用の画像は作らない（iPhone・iPhone Duo・iPad の素材がそろっていない）")
 }
-
-print("完成画像: \(outputDirectory.path)")
