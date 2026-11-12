@@ -18,6 +18,7 @@ struct ElectronicMoneyTabView: View {
             SortDescriptor(\ElectronicMoney.name)
         ]
     ) private var electronicMoneys: [ElectronicMoney]
+    @State private var selectedElectronicMoney: ElectronicMoney?
     @State private var showingAddSheet = false
     @State private var hasCreatedItemInPresentedSheet = false
     @State private var reviewRequestTrigger = 0
@@ -25,7 +26,7 @@ struct ElectronicMoneyTabView: View {
     init() {}
 
     var body: some View {
-        NavigationStack {
+        ListDetailSplitView(selection: selectedElectronicMoney) {
             Group {
                 if electronicMoneys.isEmpty {
                     SampleDataContentUnavailableView(
@@ -36,13 +37,11 @@ struct ElectronicMoneyTabView: View {
                         applySampleData: applySampleData
                     )
                 } else {
-                    List {
+                    List(selection: $selectedElectronicMoney) {
                         if !activeElectronicMoneys.isEmpty {
                             Section {
                                 ForEach(activeElectronicMoneys) { electronicMoney in
-                                    NavigationLink {
-                                        ElectronicMoneyDetailView(electronicMoney: electronicMoney)
-                                    } label: {
+                                    NavigationLink(value: electronicMoney) {
                                         ElectronicMoneyRow(electronicMoney: electronicMoney)
                                     }
                                     .swipeToDeleteTip(isPresented: electronicMoney.id == displayedElectronicMoneys.first?.id)
@@ -57,9 +56,7 @@ struct ElectronicMoneyTabView: View {
                         if !inactiveElectronicMoneys.isEmpty {
                             Section {
                                 ForEach(inactiveElectronicMoneys) { electronicMoney in
-                                    NavigationLink {
-                                        ElectronicMoneyDetailView(electronicMoney: electronicMoney)
-                                    } label: {
+                                    NavigationLink(value: electronicMoney) {
                                         ElectronicMoneyRow(electronicMoney: electronicMoney)
                                     }
                                     .swipeToDeleteTip(isPresented: electronicMoney.id == displayedElectronicMoneys.first?.id)
@@ -103,6 +100,12 @@ struct ElectronicMoneyTabView: View {
                     await SwipeToDeleteTip.listReceivedFirstItem.donate()
                 }
             }
+        } detail: {
+            if let selectedElectronicMoney {
+                ElectronicMoneyDetailView(electronicMoney: selectedElectronicMoney)
+            } else {
+                ContentUnavailableView("ウォレットを選択", systemImage: "iphone.gen3")
+            }
         }
         .reviewRequestAfterCreation(trigger: reviewRequestTrigger)
     }
@@ -129,6 +132,9 @@ struct ElectronicMoneyTabView: View {
             .map(\.element)
 
         for index in offsets {
+            if electronicMoneys[index] == selectedElectronicMoney {
+                selectedElectronicMoney = nil
+            }
             modelContext.delete(electronicMoneys[index])
         }
 

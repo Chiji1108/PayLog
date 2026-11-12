@@ -18,6 +18,7 @@ struct SubscriptionTabView: View {
             SortDescriptor(\SubscriptionItem.name)
         ]
     ) private var subscriptions: [SubscriptionItem]
+    @State private var selection: SubscriptionSelection?
     @State private var showingAddSheet = false
     @State private var selectedFilter: SubscriptionFilter = .all
     @State private var hasCreatedItemInPresentedSheet = false
@@ -26,7 +27,7 @@ struct SubscriptionTabView: View {
     init() {}
 
     var body: some View {
-        NavigationStack {
+        ListDetailSplitView(selection: selection) {
             content
             .navigationTitle("固定費")
             .toolbar {
@@ -50,8 +51,8 @@ struct SubscriptionTabView: View {
                         }
                         .accessibilityLabel("請求サイクルで絞り込む")
 
-                        NavigationLink {
-                            SubscriptionInsightsView()
+                        Button {
+                            selection = .insights
                         } label: {
                             Label("分析を見る", systemImage: "chart.bar.xaxis")
                         }
@@ -77,6 +78,15 @@ struct SubscriptionTabView: View {
             .onChange(of: subscriptions.count) { oldValue, newValue in
                 handleSubscriptionCountChange(from: oldValue, to: newValue)
             }
+        } detail: {
+            switch selection {
+            case let .subscription(subscription):
+                SubscriptionDetailView(subscription: subscription)
+            case .insights:
+                SubscriptionInsightsView()
+            case nil:
+                ContentUnavailableView("固定費を選択", systemImage: "repeat.circle")
+            }
         }
         .reviewRequestAfterCreation(trigger: reviewRequestTrigger)
     }
@@ -97,7 +107,7 @@ struct SubscriptionTabView: View {
     }
 
     private var subscriptionList: some View {
-        List {
+        List(selection: $selection) {
             if filteredSubscriptions.isEmpty {
                 filteredEmptySection
             } else {
@@ -201,6 +211,9 @@ struct SubscriptionTabView: View {
             .map(\.element)
 
         for index in offsets {
+            if selection == .subscription(subscriptions[index]) {
+                selection = nil
+            }
             modelContext.delete(subscriptions[index])
         }
 
@@ -278,9 +291,7 @@ struct SubscriptionTabView: View {
 
     @ViewBuilder
     private func subscriptionNavigationLink(for subscription: SubscriptionItem) -> some View {
-        NavigationLink {
-            SubscriptionDetailView(subscription: subscription)
-        } label: {
+        NavigationLink(value: SubscriptionSelection.subscription(subscription)) {
             SubscriptionRow(subscription: subscription)
         }
         .swipeToDeleteTip(isPresented: subscription.persistentModelID == firstFilteredSubscriptionID)
@@ -352,6 +363,12 @@ struct SubscriptionTabView: View {
     private func saveModelContext() {
         try? modelContext.save()
     }
+}
+
+/// 詳細側に表示するもの
+private enum SubscriptionSelection: Hashable {
+    case subscription(SubscriptionItem)
+    case insights
 }
 
 private enum SubscriptionFilter: Hashable, Identifiable {
