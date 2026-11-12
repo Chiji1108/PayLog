@@ -63,6 +63,8 @@ struct OnboardingView: View {
                 .buttonStyle(.borderedProminent)
                 .buttonBorderShape(.roundedRectangle)
             }
+            // 広い画面（iPad や iPhone Duo の内側の画面）では、読みやすい幅にとどめて中央に置く
+            .frame(maxWidth: 480)
             .padding(.horizontal, 24)
             .padding(.vertical, 32)
         }
