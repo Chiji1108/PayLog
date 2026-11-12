@@ -119,10 +119,12 @@ struct Canvas {
 
     /// 端末フレームに入れたアプリ画面を、画面上端が `top` に来るように描く。
     /// `highlight`（画面に対する割合）があれば、その部分を拡大して上に重ねる。
-    func phone(_ screen: CGImage, top: CGFloat, highlight: CGRect? = nil) {
-        let screenWidth = width * 0.72
+    /// `screenWidth` と `centerX` を省くと、キャンバス中央に幅の 72% で置く。
+    func phone(_ screen: CGImage, top: CGFloat, screenWidth: CGFloat? = nil, centerX: CGFloat? = nil, highlight: CGRect? = nil) {
+        let screenWidth = screenWidth ?? width * 0.72
+        let centerX = centerX ?? width / 2
         let screenHeight = screenWidth * CGFloat(screen.height) / CGFloat(screen.width)
-        let screenX = (width - screenWidth) / 2
+        let screenX = centerX - screenWidth / 2
         let screenRadius = screenWidth * 0.14
         let bezel = screenWidth * 0.028
         let rim = screenWidth * 0.008
@@ -144,7 +146,7 @@ struct Canvas {
         let islandWidth = screenWidth * 0.29
         let islandHeight = screenWidth * 0.085
         fill(
-            rect(x: (width - islandWidth) / 2, y: top + screenWidth * 0.032, width: islandWidth, height: islandHeight),
+            rect(x: centerX - islandWidth / 2, y: top + screenWidth * 0.032, width: islandWidth, height: islandHeight),
             radius: islandHeight / 2,
             color: CGColor(gray: 0, alpha: 1)
         )
@@ -225,6 +227,43 @@ for (index, shot) in shots.enumerated() {
     }
 
     canvas.write(to: outputDirectory.appendingPathComponent(String(format: "%02d.png", index + 1)))
+}
+
+// 商品ページのヘッダ用と検索結果用の横長画像（どちらも任意）。
+// 端末によって左右が切り取られるので、コピーと中央の端末を真ん中に寄せ、左右の端末は切れてもよい飾りにする。
+struct Banner {
+    let name: String
+    let width: Int
+    let height: Int
+    /// レイアウトの基準長（ピクセル）
+    let unit: CGFloat
+}
+
+let banners = [
+    Banner(name: "header", width: 3840, height: 1646, unit: 16.5),
+    Banner(name: "search", width: 3840, height: 2560, unit: 20),
+]
+
+for banner in banners {
+    let canvas = Canvas(width: banner.width, height: banner.height)
+    let unit = banner.unit
+    let screen = { (name: String) in loadImage(rawDirectory.appendingPathComponent("\(name).png")) }
+
+    canvas.fill(
+        CGRect(x: 0, y: 0, width: canvas.width, height: canvas.height),
+        color: CGColor(red: 0.945, green: 0.949, blue: 0.965, alpha: 1)
+    )
+
+    let captionFont = CTFontCreateWithName("HiraginoSans-W7" as CFString, unit * 6.4, nil)
+    for (lineIndex, line) in shots[0].caption.enumerated() {
+        canvas.text(line, font: captionFont, centerY: unit * (12 + 11 * CGFloat(lineIndex)))
+    }
+
+    canvas.phone(screen("06-card-detail"), top: unit * 46, screenWidth: unit * 44, centerX: canvas.width / 2 - unit * 62)
+    canvas.phone(screen("08-bank-detail"), top: unit * 46, screenWidth: unit * 44, centerX: canvas.width / 2 + unit * 62)
+    canvas.phone(screen("01-subscriptions"), top: unit * 36, screenWidth: unit * 52)
+
+    canvas.write(to: outputDirectory.appendingPathComponent("\(banner.name).png"))
 }
 
 print("完成画像: \(outputDirectory.path)")
