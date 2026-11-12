@@ -4,7 +4,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-DEVICE="${1:-iPhone 18 Pro Max}"
+# App Store Connect が受け付けるのは 6.1 / 6.3 インチのサイズ（1206×2622 など）
+DEVICE="${1:-iPhone 18 Pro}"
 RAW_DIR="$PWD/screenshots/raw"      # アプリ画面の素材
 STORE_DIR="$PWD/screenshots/store"  # コピーと端末フレームを載せた完成画像
 
