@@ -5,9 +5,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # App Store Connect が受け付けるサイズの端末:
-# iPhone 18 Pro は 6.3 インチ（1206×2622）、iPhone Duo は外側の画面（1398×2034）
+# iPhone 18 Pro は 6.3 インチ（1206×2622）、iPhone Duo は外側の画面（1398×2034）、
+# iPad Pro 13-inch (M5) は 13 インチ（2064×2752）
+# iPhone Duo は閉じた状態で撮る（開いていると、消灯した外側の画面が写る）
 if [ $# -eq 0 ]; then
-    set -- "iPhone 18 Pro" "iPhone Duo"
+    set -- "iPhone 18 Pro" "iPhone Duo" "iPad Pro 13-inch (M5)"
 fi
 
 for DEVICE in "$@"; do
