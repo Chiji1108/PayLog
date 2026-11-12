@@ -44,6 +44,7 @@ struct ElectronicMoneyTabView: View {
                                     NavigationLink(value: electronicMoney) {
                                         ElectronicMoneyRow(electronicMoney: electronicMoney)
                                     }
+                                    .selectionDisabledWhileEditing()
                                     .swipeToDeleteTip(isPresented: electronicMoney.id == displayedElectronicMoneys.first?.id)
                                 }
                                 .onDelete(perform: deleteActiveElectronicMoneys)
@@ -59,6 +60,7 @@ struct ElectronicMoneyTabView: View {
                                     NavigationLink(value: electronicMoney) {
                                         ElectronicMoneyRow(electronicMoney: electronicMoney)
                                     }
+                                    .selectionDisabledWhileEditing()
                                     .swipeToDeleteTip(isPresented: electronicMoney.id == displayedElectronicMoneys.first?.id)
                                 }
                                 .onDelete(perform: deleteInactiveElectronicMoneys)
@@ -90,6 +92,12 @@ struct ElectronicMoneyTabView: View {
                 ElectronicMoneyEditorView(electronicMoney: nil, onDelete: nil, onCreate: {
                     hasCreatedItemInPresentedSheet = true
                 })
+            }
+            // 削除された項目を詳細に表示したままにしない（一覧のスワイプでも、詳細の編集画面からでも）
+            .onChange(of: electronicMoneys) {
+                if let selectedElectronicMoney, !electronicMoneys.contains(selectedElectronicMoney) {
+                    self.selectedElectronicMoney = nil
+                }
             }
             .onChange(of: electronicMoneys.count) { oldValue, newValue in
                 guard oldValue == 0, newValue > 0 else {
@@ -132,9 +140,6 @@ struct ElectronicMoneyTabView: View {
             .map(\.element)
 
         for index in offsets {
-            if electronicMoneys[index] == selectedElectronicMoney {
-                selectedElectronicMoney = nil
-            }
             modelContext.delete(electronicMoneys[index])
         }
 

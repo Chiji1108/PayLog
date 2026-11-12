@@ -78,6 +78,12 @@ struct SubscriptionTabView: View {
             .onChange(of: subscriptions.count) { oldValue, newValue in
                 handleSubscriptionCountChange(from: oldValue, to: newValue)
             }
+            // 削除された項目を詳細に表示したままにしない（一覧のスワイプでも、詳細の編集画面からでも）
+            .onChange(of: subscriptions) {
+                if case let .subscription(subscription) = selection, !subscriptions.contains(subscription) {
+                    selection = nil
+                }
+            }
         } detail: {
             switch selection {
             case let .subscription(subscription):
@@ -211,9 +217,6 @@ struct SubscriptionTabView: View {
             .map(\.element)
 
         for index in offsets {
-            if selection == .subscription(subscriptions[index]) {
-                selection = nil
-            }
             modelContext.delete(subscriptions[index])
         }
 
@@ -294,6 +297,7 @@ struct SubscriptionTabView: View {
         NavigationLink(value: SubscriptionSelection.subscription(subscription)) {
             SubscriptionRow(subscription: subscription)
         }
+        .selectionDisabledWhileEditing()
         .swipeToDeleteTip(isPresented: subscription.persistentModelID == firstFilteredSubscriptionID)
     }
 

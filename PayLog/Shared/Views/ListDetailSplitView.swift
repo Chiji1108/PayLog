@@ -39,3 +39,18 @@ struct ListDetailSplitView<Selection: Hashable, Sidebar: View, Detail: View>: Vi
         }
     }
 }
+
+extension View {
+    /// 並べ替えの編集中は、行をタップしても詳細を開かない
+    func selectionDisabledWhileEditing() -> some View {
+        modifier(SelectionDisabledWhileEditing())
+    }
+}
+
+private struct SelectionDisabledWhileEditing: ViewModifier {
+    @Environment(\.editMode) private var editMode
+
+    func body(content: Content) -> some View {
+        content.selectionDisabled(editMode?.wrappedValue.isEditing == true)
+    }
+}
