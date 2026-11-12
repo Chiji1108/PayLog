@@ -44,6 +44,7 @@ struct BankTabView: View {
                                     NavigationLink(value: bank) {
                                         BankRow(bank: bank)
                                     }
+                                    .selectionDisabledWhileEditing()
                                     .swipeToDeleteTip(isPresented: bank.id == displayedBanks.first?.id)
                                 }
                                 .onDelete(perform: deleteActiveBanks)
@@ -59,6 +60,7 @@ struct BankTabView: View {
                                     NavigationLink(value: bank) {
                                         BankRow(bank: bank)
                                     }
+                                    .selectionDisabledWhileEditing()
                                     .swipeToDeleteTip(isPresented: bank.id == displayedBanks.first?.id)
                                 }
                                 .onDelete(perform: deleteInactiveBanks)
@@ -90,6 +92,12 @@ struct BankTabView: View {
                 BankEditorView(bank: nil, onDelete: nil, onCreate: {
                     hasCreatedItemInPresentedSheet = true
                 })
+            }
+            // 削除された項目を詳細に表示したままにしない（一覧のスワイプでも、詳細の編集画面からでも）
+            .onChange(of: banks) {
+                if let selectedBank, !banks.contains(selectedBank) {
+                    self.selectedBank = nil
+                }
             }
             .onChange(of: banks.count) { oldValue, newValue in
                 guard oldValue == 0, newValue > 0 else {
@@ -132,9 +140,6 @@ struct BankTabView: View {
             .map(\.element)
 
         for index in offsets {
-            if banks[index] == selectedBank {
-                selectedBank = nil
-            }
             modelContext.delete(banks[index])
         }
 

@@ -44,6 +44,7 @@ struct CardTabView: View {
                                     NavigationLink(value: CardSelection.card(card)) {
                                         CardRow(card: card)
                                     }
+                                    .selectionDisabledWhileEditing()
                                     .swipeToDeleteTip(isPresented: card.id == displayedCards.first?.id)
                                 }
                                 .onDelete(perform: deleteActiveCards)
@@ -59,6 +60,7 @@ struct CardTabView: View {
                                     NavigationLink(value: CardSelection.card(card)) {
                                         CardRow(card: card)
                                     }
+                                    .selectionDisabledWhileEditing()
                                     .swipeToDeleteTip(isPresented: card.id == displayedCards.first?.id)
                                 }
                                 .onDelete(perform: deleteInactiveCards)
@@ -96,6 +98,12 @@ struct CardTabView: View {
                 CardEditorView(card: nil, onDelete: nil, onCreate: {
                     hasCreatedItemInPresentedSheet = true
                 })
+            }
+            // 削除された項目を詳細に表示したままにしない（一覧のスワイプでも、詳細の編集画面からでも）
+            .onChange(of: cards) {
+                if case let .card(card) = selection, !cards.contains(card) {
+                    selection = nil
+                }
             }
             .onChange(of: cards.count) { oldValue, newValue in
                 guard oldValue == 0, newValue > 0 else {
@@ -143,9 +151,6 @@ struct CardTabView: View {
             .map(\.element)
 
         for index in offsets {
-            if selection == .card(cards[index]) {
-                selection = nil
-            }
             modelContext.delete(cards[index])
         }
 
