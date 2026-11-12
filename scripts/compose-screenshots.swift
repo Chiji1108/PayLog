@@ -80,6 +80,11 @@ struct Canvas {
         )!
         self.width = CGFloat(width)
         self.height = CGFloat(height)
+        // 背景
+        fill(
+            CGRect(x: 0, y: 0, width: width, height: height),
+            color: CGColor(red: 0.945, green: 0.949, blue: 0.965, alpha: 1)
+        )
     }
 
     /// 左上原点の矩形を CoreGraphics の左下原点に変換する
@@ -207,11 +212,6 @@ for (index, shot) in shots.enumerated() {
     let canvas = Canvas(width: screen.width, height: screen.height)
     let unit = canvas.width / 100
 
-    canvas.fill(
-        CGRect(x: 0, y: 0, width: canvas.width, height: canvas.height),
-        color: CGColor(red: 0.945, green: 0.949, blue: 0.965, alpha: 1)
-    )
-
     let captionFont = CTFontCreateWithName("HiraginoSans-W7" as CFString, unit * 5.4, nil)
     for (lineIndex, line) in shot.caption.enumerated() {
         canvas.text(line, font: captionFont, centerY: unit * (18 + 10.4 * CGFloat(lineIndex)))
@@ -248,11 +248,6 @@ for banner in banners {
     let canvas = Canvas(width: banner.width, height: banner.height)
     let unit = banner.unit
     let screen = { (name: String) in loadImage(rawDirectory.appendingPathComponent("\(name).png")) }
-
-    canvas.fill(
-        CGRect(x: 0, y: 0, width: canvas.width, height: canvas.height),
-        color: CGColor(red: 0.945, green: 0.949, blue: 0.965, alpha: 1)
-    )
 
     let captionFont = CTFontCreateWithName("HiraginoSans-W7" as CFString, unit * 6.4, nil)
     for (lineIndex, line) in shots[0].caption.enumerated() {
