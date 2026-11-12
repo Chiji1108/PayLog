@@ -14,50 +14,88 @@ final class ScreenshotTests: XCTestCase {
         continueAfterFailure = false
     }
 
+    override func tearDownWithError() throws {
+        XCUIDevice.shared.orientation = .portrait
+    }
+
+    /// iPad は一覧と詳細が左右に並ぶので、横向きで別の構成を撮る。
     func testCaptureScreenshots() throws {
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            captureForPad()
+        } else {
+            captureForPhone()
+        }
+    }
+
+    private func captureForPhone() {
         launch(hasCompletedOnboarding: true)
 
-        capture("01-subscriptions")
+        capture("subscriptions")
 
         row("Netflix").tap()
-        capture("02-subscription-detail", highlighting: ["支払い方法", "支払いカード"])
+        capture("subscription-detail", highlighting: ["支払い方法", "支払いカード"])
 
         goBack()
 
         app.buttons["分析を見る"].tap()
-        capture("04-subscription-insights")
+        capture("subscription-insights")
         goBack()
 
         app.swipeUp()
-        capture("05-subscriptions-inactive", highlighting: ["Spotify", "YouTube Premium", "MUFG Card 年会費"])
+        capture("subscriptions-inactive", highlighting: ["Spotify", "YouTube Premium", "MUFG Card 年会費"])
 
         tab("カード").tap()
         row("Olive").tap()
         app.swipeUp()
-        capture("06-card-detail", highlighting: ["Netflix", "ChatGPT Plus", "¥5,500"])
+        capture("card-detail", highlighting: ["Netflix", "ChatGPT Plus", "¥5,500"])
         goBack()
 
         app.buttons["通知設定"].tap()
         turnOn("締日通知をオン")
         turnOn("引き落とし日通知をオン")
-        capture("07-card-notifications", highlighting: ["締日通知をオン", "通知タイミング", "通知時刻"])
+        capture("card-notifications", highlighting: ["締日通知をオン", "通知タイミング", "通知時刻"])
         goBack()
 
         tab("銀行口座").tap()
         row("三菱UFJ銀行").tap()
-        capture("08-bank-detail", highlighting: ["支店名", "口座番号"])
+        capture("bank-detail", highlighting: ["支店名", "口座番号"])
 
         // 編集画面は閉じずに済むよう、起動し直して最後に撮る
         // （iPhone Duo では、送ったあとキャンセルボタンが画面外に出る）
         app.terminate()
         launch(hasCompletedOnboarding: true)
         row("Netflix").tap()
-        detailEditButton.tap()
-        capture("03-subscription-editor", highlighting: ["通貨", "単位", "毎月"])
+        app.buttons["編集"].tap()
+        capture("subscription-editor", highlighting: ["通貨", "単位", "毎月"])
 
         app.terminate()
         launch(hasCompletedOnboarding: false)
-        capture("09-onboarding")
+        capture("onboarding")
+    }
+
+    /// 一覧で項目を選ぶと、詳細が右側に並ぶ。戻る操作はいらない。
+    private func captureForPad() {
+        XCUIDevice.shared.orientation = .landscapeLeft
+        launch(hasCompletedOnboarding: true)
+
+        row("Netflix").tap()
+        capture("subscriptions")
+
+        app.buttons["分析を見る"].tap()
+        capture("subscription-insights")
+
+        tab("カード").tap()
+        row("Olive").tap()
+        capture("card-detail", highlighting: ["Netflix", "ChatGPT Plus", "¥5,500"])
+
+        app.buttons["通知設定"].tap()
+        turnOn("締日通知をオン")
+        turnOn("引き落とし日通知をオン")
+        capture("card-notifications", highlighting: ["締日通知をオン", "通知タイミング", "通知時刻"])
+
+        tab("銀行口座").tap()
+        row("三菱UFJ銀行").tap()
+        capture("bank-detail", highlighting: ["支店名", "口座番号"])
     }
 
     private func launch(hasCompletedOnboarding: Bool) {
@@ -81,18 +119,8 @@ final class ScreenshotTests: XCTestCase {
 
     /// 戻るボタンとタブは、iPhone Duo ではナビゲーションバーやタブバーではなく画面端の列に並ぶ。
     /// どちらの配置でも見つかるよう、置き場所ではなくボタン自体で探す。
-    /// 一覧と詳細が左右に並ぶ表示（iPad など）では、戻るボタンがないので何もしない。
     private func goBack() {
-        let backButton = app.buttons["BackButton"].firstMatch
-        if backButton.exists {
-            backButton.tap()
-        }
-    }
-
-    /// 詳細の「編集」ボタン。一覧と詳細が左右に並ぶ表示では、一覧側にも「編集」があり、詳細側が後ろに並ぶ。
-    private var detailEditButton: XCUIElement {
-        let editButtons = app.buttons.matching(NSPredicate(format: "label == %@", "編集"))
-        return editButtons.element(boundBy: editButtons.count - 1)
+        app.buttons["BackButton"].firstMatch.tap()
     }
 
     private func tab(_ name: String) -> XCUIElement {
