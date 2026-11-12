@@ -8,13 +8,13 @@ import SwiftUI
 /// 一覧と詳細を、広い画面（iPhone Duo の内側の画面など）では左右に並べ、
 /// 狭い画面では一覧から詳細へ進む1列の表示にまとめる。
 struct ListDetailSplitView<Selection: Hashable, Sidebar: View, Detail: View>: View {
-    /// 一覧で選ばれているもの。変わるたびに、詳細側の画面の積み重ねを作り直す。
-    let selection: Selection?
+    /// 詳細側に表示するもの。変わるたびに、詳細側の画面の積み重ねを作り直す。
+    @Binding var selection: Selection?
     @ViewBuilder let sidebar: Sidebar
     @ViewBuilder let detail: Detail
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(preferredCompactColumn: compactColumn) {
             sidebar
                 .navigationSplitViewColumnWidth(min: 320, ideal: 420)
         } detail: {
@@ -25,5 +25,17 @@ struct ListDetailSplitView<Selection: Hashable, Sidebar: View, Detail: View>: Vi
             .id(selection)
         }
         .navigationSplitViewStyle(.balanced)
+    }
+
+    /// 1列の表示では、選択があれば詳細を、なければ一覧を出す。
+    /// 一覧の行以外（ツールバーのボタンなど）から選択を変えたときも、詳細へ切り替わる。
+    private var compactColumn: Binding<NavigationSplitViewColumn> {
+        Binding {
+            selection == nil ? .sidebar : .detail
+        } set: { column in
+            if column == .sidebar {
+                selection = nil
+            }
+        }
     }
 }

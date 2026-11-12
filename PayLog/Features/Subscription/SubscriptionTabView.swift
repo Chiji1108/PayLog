@@ -27,7 +27,7 @@ struct SubscriptionTabView: View {
     init() {}
 
     var body: some View {
-        ListDetailSplitView(selection: selection) {
+        ListDetailSplitView(selection: $selection) {
             content
             .navigationTitle("固定費")
             .toolbar {
