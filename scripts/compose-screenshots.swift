@@ -17,7 +17,7 @@ struct Shot {
         case device
         /// コピー、アプリアイコン、下から覗く端末
         case icon
-        /// コピー、アプリアイコン、下から覗く iPad と iPhone
+        /// コピー、アプリアイコン、下から覗く iPad と iPhone（iPhone の素材がなければ iPad だけ）
         case iconWithPhone
     }
 
@@ -316,13 +316,14 @@ for device in devices {
             canvas.text("PayLog", font: CTFontCreateUIFontForLanguage(.emphasizedSystem, height * 0.023, nil)!, centerY: height * 0.525)
             canvas.device(screen, top: height * 0.7, screenWidth: canvas.width * 0.72)
         case .iconWithPhone:
-            guard let phone else {
-                fatalError("\(device.name) の完成画像には、iPhone の素材も必要")
-            }
             canvas.appIcon(loadImage(iconURL), centerY: height * 0.4, size: height * 0.2)
             canvas.text("PayLog", font: CTFontCreateUIFontForLanguage(.emphasizedSystem, height * 0.03, nil)!, centerY: height * 0.55)
-            canvas.device(screen, top: height * 0.66, screenWidth: canvas.width * 0.5, centerX: canvas.width * 0.42)
-            canvas.device(phone.screen("subscriptions"), top: height * 0.7, screenWidth: canvas.width * 0.13, centerX: canvas.width * 0.8)
+            if let phone {
+                canvas.device(screen, top: height * 0.66, screenWidth: canvas.width * 0.5, centerX: canvas.width * 0.42)
+                canvas.device(phone.screen("subscriptions"), top: height * 0.7, screenWidth: canvas.width * 0.13, centerX: canvas.width * 0.8)
+            } else {
+                canvas.device(screen, top: height * 0.66, screenWidth: canvas.width * 0.5)
+            }
         }
 
         canvas.write(to: outputDirectory.appendingPathComponent(String(format: "%02d.png", index + 1)))
@@ -354,9 +355,14 @@ if let phone, let foldable, let tablet {
             canvas.text(line, font: captionFont(size: unit * 6.4), centerY: unit * (12 + 11 * CGFloat(lineIndex)))
         }
 
-        canvas.device(phone.screen("card-detail"), top: unit * 46, screenWidth: unit * 34, centerX: canvas.width / 2 - unit * 74)
-        canvas.device(foldable.screen("subscription-insights"), top: unit * 50, screenWidth: unit * 36, centerX: canvas.width / 2 + unit * 75)
-        canvas.device(tablet.screen("subscriptions"), top: unit * 36, screenWidth: unit * 96)
+        // 3 台を同じ面に置いたように、下端をそろえて並べる
+        func place(_ screen: CGImage, screenWidth: CGFloat, offsetX: CGFloat) {
+            let screenHeight = screenWidth * CGFloat(screen.height) / CGFloat(screen.width)
+            canvas.device(screen, top: unit * 108 - screenHeight, screenWidth: screenWidth, centerX: canvas.width / 2 + offsetX)
+        }
+        place(phone.screen("card-detail"), screenWidth: unit * 30, offsetX: -unit * 72)
+        place(foldable.screen("subscription-insights"), screenWidth: unit * 32, offsetX: unit * 73)
+        place(tablet.screen("subscriptions"), screenWidth: unit * 96, offsetX: 0)
 
         canvas.write(to: outputRoot.appendingPathComponent("\(banner.name).png"))
     }
