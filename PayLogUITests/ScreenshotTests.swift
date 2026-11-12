@@ -22,9 +22,6 @@ final class ScreenshotTests: XCTestCase {
         row("Netflix").tap()
         capture("02-subscription-detail", highlighting: ["支払い方法", "支払いカード"])
 
-        app.buttons["編集"].tap()
-        capture("03-subscription-editor", highlighting: ["通貨", "単位", "毎月"])
-        app.buttons["キャンセル"].tap()
         goBack()
 
         app.buttons["分析を見る"].tap()
@@ -34,7 +31,7 @@ final class ScreenshotTests: XCTestCase {
         app.swipeUp()
         capture("05-subscriptions-inactive", highlighting: ["Spotify", "YouTube Premium", "MUFG Card 年会費"])
 
-        app.tabBars.buttons["カード"].tap()
+        tab("カード").tap()
         row("Olive").tap()
         app.swipeUp()
         capture("06-card-detail", highlighting: ["Netflix", "ChatGPT Plus", "¥5,500"])
@@ -46,9 +43,17 @@ final class ScreenshotTests: XCTestCase {
         capture("07-card-notifications", highlighting: ["締日通知をオン", "通知タイミング", "通知時刻"])
         goBack()
 
-        app.tabBars.buttons["銀行口座"].tap()
+        tab("銀行口座").tap()
         row("三菱UFJ銀行").tap()
         capture("08-bank-detail", highlighting: ["支店名", "口座番号"])
+
+        // 編集画面は閉じずに済むよう、起動し直して最後に撮る
+        // （iPhone Duo では、送ったあとキャンセルボタンが画面外に出る）
+        app.terminate()
+        launch(hasCompletedOnboarding: true)
+        row("Netflix").tap()
+        app.buttons["編集"].tap()
+        capture("03-subscription-editor", highlighting: ["通貨", "単位", "毎月"])
 
         app.terminate()
         launch(hasCompletedOnboarding: false)
@@ -74,8 +79,14 @@ final class ScreenshotTests: XCTestCase {
         return element
     }
 
+    /// 戻るボタンとタブは、iPhone Duo ではナビゲーションバーやタブバーではなく画面端の列に並ぶ。
+    /// どちらの配置でも見つかるよう、置き場所ではなくボタン自体で探す。
     private func goBack() {
-        app.navigationBars.buttons.firstMatch.tap()
+        app.buttons["BackButton"].firstMatch.tap()
+    }
+
+    private func tab(_ name: String) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "label == %@", name)).firstMatch
     }
 
     /// 通知のスイッチをオンにする。初回だけ出る通知の許可ダイアログは許可する。
@@ -96,6 +107,10 @@ final class ScreenshotTests: XCTestCase {
     /// `highlighting` に行の文言を渡すと、それらの行を囲む範囲（画面に対する割合）を
     /// 同名の JSON に書き出す。完成画像では、その範囲が拡大して重ねられる。
     private func capture(_ name: String, highlighting rows: [String] = []) {
+        // 強調する行が画面の下に隠れていれば、見えるところまで少しずつ送る（画面の短い端末向け）
+        for _ in 0..<5 where !rows.allSatisfy({ cell($0).exists }) {
+            app.swipeUp(velocity: .slow)
+        }
         // 画面遷移のアニメーションが終わるのを待つ
         Thread.sleep(forTimeInterval: 1)
         let screenshot = XCUIScreen.main.screenshot()
@@ -125,11 +140,15 @@ final class ScreenshotTests: XCTestCase {
         }
     }
 
-    /// `text` を含むリストの行の位置
-    private func cellFrame(_ text: String) -> CGRect {
-        let cell = app.cells
+    /// `text` を含むリストの行
+    private func cell(_ text: String) -> XCUIElement {
+        app.cells
             .containing(NSPredicate(format: "label CONTAINS %@", text))
             .firstMatch
+    }
+
+    private func cellFrame(_ text: String) -> CGRect {
+        let cell = cell(text)
         XCTAssertTrue(cell.exists, "\(text) の行が見つからない")
         return cell.frame
     }

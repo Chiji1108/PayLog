@@ -35,6 +35,7 @@ struct SubscriptionInsightsView: View {
     @Query private var subscriptions: [SubscriptionItem]
     @State private var yenRates = SubscriptionInsightSettings.loadYenRates()
     @State private var selectedPeriod: SubscriptionInsightPeriod = .month
+    @Environment(\.displayScale) private var displayScale
     @AppStorage("subscriptionInsights.breakdown") private var selectedBreakdown = SubscriptionInsightBreakdown.category
     @State private var sharePhoto: SubscriptionInsightsSharePhoto?
     @State private var selectedBreakdownAmount: Double?
@@ -531,7 +532,7 @@ struct SubscriptionInsightsView: View {
         .frame(width: 720)
 
         let renderer = ImageRenderer(content: cardView)
-        renderer.scale = UIScreen.main.scale
+        renderer.scale = displayScale
 
         guard let uiImage = renderer.uiImage else {
             sharePhoto = nil

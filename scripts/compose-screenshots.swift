@@ -126,9 +126,11 @@ struct Canvas {
     /// `highlight`（画面に対する割合）があれば、その部分を拡大して上に重ねる。
     /// `screenWidth` と `centerX` を省くと、キャンバス中央に幅の 72% で置く。
     func phone(_ screen: CGImage, top: CGFloat, screenWidth: CGFloat? = nil, centerX: CGFloat? = nil, highlight: CGRect? = nil) {
-        let screenWidth = screenWidth ?? width * 0.72
+        let aspect = CGFloat(screen.height) / CGFloat(screen.width)
+        // 既定の幅は、端末の下端がキャンバスに収まる範囲で最大 72%（画面の短い iPhone Duo は小さくなる）
+        let screenWidth = screenWidth ?? min(width * 0.72, (height - top - width * 0.06) / aspect)
         let centerX = centerX ?? width / 2
-        let screenHeight = screenWidth * CGFloat(screen.height) / CGFloat(screen.width)
+        let screenHeight = screenWidth * aspect
         let screenX = centerX - screenWidth / 2
         let screenRadius = screenWidth * 0.14
         let bezel = screenWidth * 0.028
@@ -147,15 +149,22 @@ struct Canvas {
         )
         draw(screen, in: screenRect, radius: screenRadius)
 
-        // Dynamic Island
-        let islandWidth = screenWidth * 0.29
-        let islandHeight = screenWidth * 0.085
-        fill(
-            rect(x: centerX - islandWidth / 2, y: top + screenWidth * 0.032, width: islandWidth, height: islandHeight),
-            radius: islandHeight / 2,
-            color: CGColor(gray: 0, alpha: 1)
-        )
+        // Dynamic Island（縦長の iPhone だけ。iPhone Duo の外側の画面にはない）
+        if aspect > 2 {
+            let islandWidth = screenWidth * 0.29
+            let islandHeight = screenWidth * 0.085
+            fill(
+                rect(x: centerX - islandWidth / 2, y: top + screenWidth * 0.032, width: islandWidth, height: islandHeight),
+                radius: islandHeight / 2,
+                color: CGColor(gray: 0, alpha: 1)
+            )
+        }
 
+        zoom(screen, highlight, screenRect: screenRect)
+    }
+
+    /// 画面の `highlight`（画面に対する割合）の部分を拡大して、端末の上に重ねる
+    private func zoom(_ screen: CGImage, _ highlight: CGRect?, screenRect: CGRect) {
         guard let highlight else { return }
         let crop = CGRect(
             x: highlight.minX * CGFloat(screen.width),
@@ -166,11 +175,12 @@ struct Canvas {
         guard let zoomed = screen.cropping(to: crop) else {
             fatalError("拡大範囲が画面の外にある: \(highlight)")
         }
-        let zoomedWidth = width * 0.92
+        // 端末の画面より左右に少しはみ出す大きさ
+        let zoomedWidth = screenRect.width * highlight.width * 1.4
         let zoomedHeight = zoomedWidth * crop.height / crop.width
-        let zoomedRect = rect(
-            x: (width - zoomedWidth) / 2,
-            y: top + highlight.midY * screenHeight - zoomedHeight / 2,
+        let zoomedRect = CGRect(
+            x: screenRect.midX - zoomedWidth / 2,
+            y: screenRect.maxY - highlight.midY * screenRect.height - zoomedHeight / 2,
             width: zoomedWidth,
             height: zoomedHeight
         )
@@ -182,8 +192,7 @@ struct Canvas {
         draw(zoomed, in: zoomedRect, radius: zoomedRadius)
     }
 
-    func appIcon(_ icon: CGImage, centerY: CGFloat) {
-        let size = width * 0.4
+    func appIcon(_ icon: CGImage, centerY: CGFloat, size: CGFloat) {
         let iconRect = rect(x: (width - size) / 2, y: centerY - size / 2, width: size, height: size)
         context.saveGState()
         context.setShadow(offset: CGSize(width: 0, height: -size * 0.02), blur: size * 0.08, color: CGColor(gray: 0, alpha: 0.15))
@@ -221,9 +230,11 @@ for (index, shot) in shots.enumerated() {
     case .phone:
         canvas.phone(screen, top: unit * 47, highlight: highlight)
     case .icon:
-        canvas.appIcon(loadImage(iconURL), centerY: unit * 86)
-        canvas.text("PayLog", font: CTFontCreateUIFontForLanguage(.emphasizedSystem, unit * 5, nil)!, centerY: unit * 114)
-        canvas.phone(screen, top: unit * 152)
+        // 画面の縦横比が違う端末でも収まるよう、キャンバスの高さに対する割合で置く
+        let height = canvas.height
+        canvas.appIcon(loadImage(iconURL), centerY: height * 0.396, size: height * 0.184)
+        canvas.text("PayLog", font: CTFontCreateUIFontForLanguage(.emphasizedSystem, height * 0.023, nil)!, centerY: height * 0.525)
+        canvas.phone(screen, top: height * 0.7, screenWidth: canvas.width * 0.72)
     }
 
     canvas.write(to: outputDirectory.appendingPathComponent(String(format: "%02d.png", index + 1)))
