@@ -76,3 +76,7 @@ scripts/screenshots.sh
 ## プライバシー
 
 PayLog は、入力されたデータを外部サーバーへ送信しません。詳しくは[アプリの紹介ページ](https://chiji.tech/paylog)をご覧ください。
+
+## ライセンス
+
+ソースコードは [PolyForm Strict License 1.0.0](LICENSE.md) で公開しています。非商用の目的で、読んだり、手元でビルドして試したりできます。改変と再配布はできません。
