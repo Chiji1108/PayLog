@@ -1,5 +1,5 @@
 //
-//  ReviewRequestAfterCreationModifier.swift
+//  ReviewRequestModifier.swift
 //  PayLog
 //
 //  Created by Codex on 2026/03/28.
@@ -9,48 +9,62 @@ import SwiftUI
 import SwiftData
 import StoreKit
 
-private struct ReviewRequestAfterCreationModifier: ViewModifier {
+/// 使い続けている人に、アプリを開いたときに App Store の評価を頼む。
+/// 登録を終えたあとは見るだけになる人が多いので、項目の追加ではなく、アプリを開いたことをきっかけにする。
+private struct ReviewRequestModifier: ViewModifier {
     @Environment(\.requestReview) private var requestReview
-    @Query private var subscriptions: [SubscriptionItem]
-    @Query private var cards: [Card]
-    @Query private var banks: [Bank]
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.modelContext) private var modelContext
     @AppStorage(ReviewRequestPolicy.firstLaunchTimestampKey) private var firstLaunchTimestamp = 0.0
-    @AppStorage(ReviewRequestPolicy.hasRequestedReviewKey) private var hasRequestedReview = false
-
-    let trigger: Int
+    @AppStorage(ReviewRequestPolicy.lastRequestedVersionKey) private var lastRequestedVersion = ""
 
     func body(content: Content) -> some View {
         content
-            .onChange(of: trigger) { _, _ in
-                requestReviewIfEligible()
+            // 待っている間にアプリを離れたら、頼むのをやめる
+            .task(id: scenePhase) {
+                guard scenePhase == .active, !ProcessInfo.isRunningForXcodePreviews, !ProcessInfo.isTakingScreenshots else {
+                    return
+                }
+
+                if firstLaunchTimestamp == 0 {
+                    firstLaunchTimestamp = Date.now.timeIntervalSince1970
+                }
+
+                guard ReviewRequestPolicy.isEligible(
+                    firstLaunchTimestamp: firstLaunchTimestamp,
+                    itemCount: itemCount,
+                    lastRequestedVersion: lastRequestedVersion,
+                    currentVersion: currentVersion
+                ) else {
+                    return
+                }
+
+                do {
+                    try await Task.sleep(for: ReviewRequestPolicy.delay)
+                } catch {
+                    return
+                }
+
+                lastRequestedVersion = currentVersion
+                requestReview()
             }
     }
 
-    private func requestReviewIfEligible() {
-        guard !hasRequestedReview else {
-            return
-        }
+    private var itemCount: Int {
+        count(SubscriptionItem.self) + count(Card.self) + count(Bank.self) + count(ElectronicMoney.self)
+    }
 
-        guard ReviewRequestPolicy.isEligible(
-            firstLaunchTimestamp: firstLaunchTimestamp,
-            activeSubscriptionCount: subscriptions.filter(\.isActive).count,
-            cardCount: cards.count,
-            bankCount: banks.count
-        ) else {
-            return
-        }
+    private func count<Model: PersistentModel>(_ model: Model.Type) -> Int {
+        (try? modelContext.fetchCount(FetchDescriptor<Model>())) ?? 0
+    }
 
-        hasRequestedReview = true
-
-        Task {
-            try? await Task.sleep(nanoseconds: ReviewRequestPolicy.reviewDelayNanoseconds)
-            requestReview()
-        }
+    private var currentVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
     }
 }
 
 extension View {
-    func reviewRequestAfterCreation(trigger: Int) -> some View {
-        modifier(ReviewRequestAfterCreationModifier(trigger: trigger))
+    func reviewRequest() -> some View {
+        modifier(ReviewRequestModifier())
     }
 }

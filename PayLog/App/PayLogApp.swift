@@ -16,11 +16,10 @@ struct PayLogApp: App {
     private let screenshotContainer: ModelContainer?
 
     init() {
-        let isTakingScreenshots = ProcessInfo.processInfo.arguments.contains("-screenshots")
-        screenshotContainer = isTakingScreenshots ? PreviewData.makeModelContainer() : nil
+        screenshotContainer = ProcessInfo.isTakingScreenshots ? PreviewData.makeModelContainer() : nil
 
         do {
-            if isTakingScreenshots {
+            if ProcessInfo.isTakingScreenshots {
                 Tips.hideAllTipsForTesting()
             }
             try Tips.configure()
