@@ -145,8 +145,8 @@ final class ScreenshotTests: XCTestCase {
     /// `highlighting` に行の文言を渡すと、それらの行を囲む範囲（画面に対する割合）を
     /// 同名の JSON に書き出す。完成画像では、その範囲が拡大して重ねられる。
     private func capture(_ name: String, highlighting rows: [String] = []) {
-        // 強調する行が画面の下に隠れていれば、見えるところまで少しずつ送る（画面の短い端末向け）
-        for _ in 0..<5 where !rows.allSatisfy({ cell($0).exists }) {
+        // 強調する行が画面の下に隠れたり切れたりしていれば、全体が見えるところまで少しずつ送る
+        for _ in 0..<5 where !rows.allSatisfy({ cell($0).exists && app.frame.contains(cell($0).frame) }) {
             app.swipeUp(velocity: .slow)
         }
         // 画面遷移のアニメーションが終わるのを待つ
