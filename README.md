@@ -29,7 +29,7 @@
 
 iPad と iPhone Duo の内側の画面では、一覧と詳細が左右に並びます。
 
-![iPad での表示](docs/images/ipad-01.png)
+![iPad での銀行口座の詳細](docs/images/ipad-05.png)
 
 ## 使っている技術
 
