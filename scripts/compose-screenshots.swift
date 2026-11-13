@@ -166,8 +166,8 @@ struct Canvas {
         context.restoreGState()
     }
 
-    /// 中央揃えの 1 行を、行の中心が `centerY`（左上原点）に来るように描く
-    func text(_ string: String, font: CTFont, centerY: CGFloat) {
+    /// 中央揃えの 1 行を、行の中心が `centerY`（左上原点）に来るように描く。`centerX` を省くとキャンバスの中央に置く
+    func text(_ string: String, font: CTFont, centerY: CGFloat, centerX: CGFloat? = nil) {
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: CGColor(gray: 0.07, alpha: 1),
@@ -175,7 +175,7 @@ struct Canvas {
         let line = CTLineCreateWithAttributedString(NSAttributedString(string: string, attributes: attributes))
         let bounds = CTLineGetBoundsWithOptions(line, .useOpticalBounds)
         context.textPosition = CGPoint(
-            x: (width - bounds.width) / 2 - bounds.minX,
+            x: (centerX ?? width / 2) - bounds.width / 2 - bounds.minX,
             y: height - centerY - CTFontGetCapHeight(font) / 2
         )
         CTLineDraw(line, context)
@@ -268,8 +268,8 @@ struct Canvas {
         draw(zoomed, in: zoomedRect, radius: zoomedRadius)
     }
 
-    func appIcon(_ icon: CGImage, centerY: CGFloat, size: CGFloat) {
-        let iconRect = rect(x: (width - size) / 2, y: centerY - size / 2, width: size, height: size)
+    func appIcon(_ icon: CGImage, centerY: CGFloat, size: CGFloat, centerX: CGFloat? = nil) {
+        let iconRect = rect(x: (centerX ?? width / 2) - size / 2, y: centerY - size / 2, width: size, height: size)
         context.saveGState()
         context.setShadow(offset: CGSize(width: 0, height: -size * 0.02), blur: size * 0.08, color: CGColor(gray: 0, alpha: 0.15))
         fill(iconRect, radius: size * 0.2237, color: CGColor(gray: 1, alpha: 1))
@@ -378,4 +378,19 @@ if let phone, let foldable, let tablet {
     print("ヘッダ用と検索結果用の画像: \(outputRoot.path)")
 } else {
     print("ヘッダ用と検索結果用の画像は作らない（iPhone・iPhone Duo・iPad の素材がそろっていない）")
+}
+
+// リンクを貼ったときに出る画像（GitHub のソーシャルプレビュー用、2:1）。小さく表示されても何のアプリか伝わるよう、
+// 左にアイコンとアプリ名とコピーを大きく置き、右に iPhone を 1 台だけ置く。
+if let phone {
+    let canvas = Canvas(width: 1280, height: 640)
+    let textCenter = canvas.width * 0.31
+    canvas.appIcon(loadImage(iconURL), centerY: 178, size: 132, centerX: textCenter)
+    canvas.text("PayLog", font: CTFontCreateUIFontForLanguage(.emphasizedSystem, 68, nil)!, centerY: 318, centerX: textCenter)
+    for (lineIndex, line) in phoneShots[0].caption.enumerated() {
+        canvas.text(line, font: captionFont(size: 36), centerY: 418 + 58 * CGFloat(lineIndex), centerX: textCenter)
+    }
+    canvas.device(phone.screen("subscriptions"), top: 84, screenWidth: 330, centerX: canvas.width * 0.76)
+    canvas.write(to: outputRoot.appendingPathComponent("og.png"))
+    print("リンク用の画像: \(outputRoot.path)")
 }

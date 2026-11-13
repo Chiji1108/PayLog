@@ -34,6 +34,6 @@ for DEVICE in "$@"; do
     xcrun simctl status_bar "$DEVICE" clear
 done
 
-# 完成画像は、素材のある端末すべてについて作り直す（iPad の 1 枚とヘッダ用の画像は、複数の端末の素材を使う）
+# 完成画像は、素材のある端末すべてについて作り直す（iPad の 1 枚と、ヘッダ用・リンク用の画像は、複数の端末の素材を使う）
 rm -rf "$STORE_ROOT"
 swift scripts/compose-screenshots.swift "$RAW_ROOT" "$STORE_ROOT"
