@@ -54,4 +54,9 @@ extension ProcessInfo {
         return environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
             || environment["XCODE_RUNNING_FOR_PLAYGROUNDS"] == "1"
     }
+
+    /// App Store 用スクリーンショットの撮影中（UI テストが `-screenshots` 付きで起動）
+    static var isTakingScreenshots: Bool {
+        processInfo.arguments.contains("-screenshots")
+    }
 }

@@ -20,8 +20,6 @@ struct ElectronicMoneyTabView: View {
     ) private var electronicMoneys: [ElectronicMoney]
     @State private var selectedElectronicMoney: ElectronicMoney?
     @State private var showingAddSheet = false
-    @State private var hasCreatedItemInPresentedSheet = false
-    @State private var reviewRequestTrigger = 0
 
     init() {}
 
@@ -88,10 +86,8 @@ struct ElectronicMoneyTabView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingAddSheet, onDismiss: handleAddSheetDismiss) {
-                ElectronicMoneyEditorView(electronicMoney: nil, onDelete: nil, onCreate: {
-                    hasCreatedItemInPresentedSheet = true
-                })
+            .sheet(isPresented: $showingAddSheet) {
+                ElectronicMoneyEditorView(electronicMoney: nil, onDelete: nil)
             }
             // 削除された項目を詳細に表示したままにしない（一覧のスワイプでも、詳細の編集画面からでも）
             .onChange(of: electronicMoneys) {
@@ -115,7 +111,6 @@ struct ElectronicMoneyTabView: View {
                 ContentUnavailableView("ウォレットを選択", systemImage: "iphone.gen3")
             }
         }
-        .reviewRequestAfterCreation(trigger: reviewRequestTrigger)
     }
 
     private func deleteActiveElectronicMoneys(offsets: IndexSet) {
@@ -172,15 +167,6 @@ struct ElectronicMoneyTabView: View {
 
     private func applySampleData() {
         SampleDataSeeder.replaceAllWithSampleData(in: modelContext)
-    }
-
-    private func handleAddSheetDismiss() {
-        guard hasCreatedItemInPresentedSheet else {
-            return
-        }
-
-        hasCreatedItemInPresentedSheet = false
-        reviewRequestTrigger += 1
     }
 
     private func saveModelContext() {

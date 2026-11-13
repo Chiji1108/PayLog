@@ -21,8 +21,6 @@ struct SubscriptionTabView: View {
     @State private var selection: SubscriptionSelection?
     @State private var showingAddSheet = false
     @State private var selectedFilter: SubscriptionFilter = .all
-    @State private var hasCreatedItemInPresentedSheet = false
-    @State private var reviewRequestTrigger = 0
 
     init() {}
 
@@ -65,10 +63,8 @@ struct SubscriptionTabView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingAddSheet, onDismiss: handleAddSheetDismiss) {
-                SubscriptionEditorView(subscription: nil, onDelete: nil, onCreate: {
-                    hasCreatedItemInPresentedSheet = true
-                })
+            .sheet(isPresented: $showingAddSheet) {
+                SubscriptionEditorView(subscription: nil, onDelete: nil)
             }
             .onChange(of: availableFrequencies) { _, newValue in
                 if case let .frequency(frequency) = selectedFilter, !newValue.contains(frequency) {
@@ -94,7 +90,6 @@ struct SubscriptionTabView: View {
                 ContentUnavailableView("固定費を選択", systemImage: "repeat.circle")
             }
         }
-        .reviewRequestAfterCreation(trigger: reviewRequestTrigger)
     }
 
     @ViewBuilder
@@ -339,15 +334,6 @@ struct SubscriptionTabView: View {
 
     private func applySampleData() {
         SampleDataSeeder.replaceAllWithSampleData(in: modelContext)
-    }
-
-    private func handleAddSheetDismiss() {
-        guard hasCreatedItemInPresentedSheet else {
-            return
-        }
-
-        hasCreatedItemInPresentedSheet = false
-        reviewRequestTrigger += 1
     }
 
     private func handleSubscriptionCountChange(from oldValue: Int, to newValue: Int) {

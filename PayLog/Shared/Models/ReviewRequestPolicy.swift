@@ -7,20 +7,26 @@
 
 import Foundation
 
+/// App Store の評価を頼んでよいかどうかの条件
 enum ReviewRequestPolicy {
     static let firstLaunchTimestampKey = "reviewRequest.firstLaunchTimestamp"
-    static let hasRequestedReviewKey = "reviewRequest.hasRequestedReview"
-    static let eligibleDays = 30
-    static let reviewDelayNanoseconds: UInt64 = 1_500_000_000
+    static let lastRequestedVersionKey = "reviewRequest.lastRequestedVersion"
+    /// 使い始めてからこの日数がたつまでは頼まない
+    static let eligibleDays = 7
+    /// 登録した項目（固定費・カード・銀行口座・ウォレット）がこの数に届くまでは頼まない
+    static let eligibleItemCount = 3
+    /// アプリを開いた直後を避けるための待ち時間
+    static let delay: Duration = .seconds(1.5)
 
+    /// 頼むのはバージョンごとに1回まで。実際に表示するかは、さらに OS が決める（年に3回まで）。
     static func isEligible(
         firstLaunchTimestamp: Double,
-        activeSubscriptionCount: Int,
-        cardCount: Int,
-        bankCount: Int,
+        itemCount: Int,
+        lastRequestedVersion: String,
+        currentVersion: String,
         now: Date = .now
     ) -> Bool {
-        guard firstLaunchTimestamp > 0 else {
+        guard firstLaunchTimestamp > 0, lastRequestedVersion != currentVersion else {
             return false
         }
 
@@ -29,14 +35,6 @@ enum ReviewRequestPolicy {
             .dateComponents([.day], from: firstLaunchDate, to: now)
             .day ?? 0
 
-        guard daysSinceFirstLaunch >= eligibleDays else {
-            return false
-        }
-
-        guard activeSubscriptionCount >= 2 else {
-            return false
-        }
-
-        return cardCount > 0 && bankCount > 0
+        return daysSinceFirstLaunch >= eligibleDays && itemCount >= eligibleItemCount
     }
 }

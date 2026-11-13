@@ -20,8 +20,6 @@ struct CardTabView: View {
     ) private var cards: [Card]
     @State private var selection: CardSelection?
     @State private var showingAddSheet = false
-    @State private var hasCreatedItemInPresentedSheet = false
-    @State private var reviewRequestTrigger = 0
 
     init() {}
 
@@ -94,10 +92,8 @@ struct CardTabView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingAddSheet, onDismiss: handleAddSheetDismiss) {
-                CardEditorView(card: nil, onDelete: nil, onCreate: {
-                    hasCreatedItemInPresentedSheet = true
-                })
+            .sheet(isPresented: $showingAddSheet) {
+                CardEditorView(card: nil, onDelete: nil)
             }
             // 削除された項目を詳細に表示したままにしない（一覧のスワイプでも、詳細の編集画面からでも）
             .onChange(of: cards) {
@@ -124,7 +120,6 @@ struct CardTabView: View {
                 ContentUnavailableView("カードを選択", systemImage: "creditcard")
             }
         }
-        .reviewRequestAfterCreation(trigger: reviewRequestTrigger)
     }
 
     private func deleteActiveCards(offsets: IndexSet) {
@@ -191,15 +186,6 @@ struct CardTabView: View {
             try? modelContext.save()
             await NotificationScheduler.shared.rescheduleAll(using: modelContext)
         }
-    }
-
-    private func handleAddSheetDismiss() {
-        guard hasCreatedItemInPresentedSheet else {
-            return
-        }
-
-        hasCreatedItemInPresentedSheet = false
-        reviewRequestTrigger += 1
     }
 
     private func saveModelContext() {

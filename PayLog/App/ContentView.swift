@@ -11,7 +11,6 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
-    @AppStorage(ReviewRequestPolicy.firstLaunchTimestampKey) private var firstLaunchTimestamp = 0.0
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     var body: some View {
@@ -41,12 +40,9 @@ struct ContentView: View {
                 return
             }
 
-            if firstLaunchTimestamp == 0 {
-                firstLaunchTimestamp = Date.now.timeIntervalSince1970
-            }
-
             refreshLifecycleAndNotifications()
         }
+        .reviewRequest()
         .fullScreenCover(isPresented: onboardingBinding) {
             OnboardingView {
                 hasCompletedOnboarding = true

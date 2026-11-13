@@ -20,8 +20,6 @@ struct BankTabView: View {
     ) private var banks: [Bank]
     @State private var selectedBank: Bank?
     @State private var showingAddSheet = false
-    @State private var hasCreatedItemInPresentedSheet = false
-    @State private var reviewRequestTrigger = 0
 
     init() {}
 
@@ -88,10 +86,8 @@ struct BankTabView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingAddSheet, onDismiss: handleAddSheetDismiss) {
-                BankEditorView(bank: nil, onDelete: nil, onCreate: {
-                    hasCreatedItemInPresentedSheet = true
-                })
+            .sheet(isPresented: $showingAddSheet) {
+                BankEditorView(bank: nil, onDelete: nil)
             }
             // 削除された項目を詳細に表示したままにしない（一覧のスワイプでも、詳細の編集画面からでも）
             .onChange(of: banks) {
@@ -115,7 +111,6 @@ struct BankTabView: View {
                 ContentUnavailableView("銀行口座を選択", systemImage: "building.columns")
             }
         }
-        .reviewRequestAfterCreation(trigger: reviewRequestTrigger)
     }
 
     private func deleteActiveBanks(offsets: IndexSet) {
@@ -172,15 +167,6 @@ struct BankTabView: View {
 
     private func applySampleData() {
         SampleDataSeeder.replaceAllWithSampleData(in: modelContext)
-    }
-
-    private func handleAddSheetDismiss() {
-        guard hasCreatedItemInPresentedSheet else {
-            return
-        }
-
-        hasCreatedItemInPresentedSheet = false
-        reviewRequestTrigger += 1
     }
 
     private func saveModelContext() {
