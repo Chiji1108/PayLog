@@ -20,9 +20,9 @@ private struct ReviewRequestModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            // 待っている間にアプリを離れたら、頼むのをやめる
-            .task(id: scenePhase) {
-                guard scenePhase == .active, !ProcessInfo.isRunningForXcodePreviews, !ProcessInfo.isTakingScreenshots else {
+            // アプリを開くたびに1回。通知センターや許可のダイアログを閉じただけ（一時的に操作を受け付けない状態からの復帰）では、やり直さない
+            .task(id: scenePhase == .background) {
+                guard scenePhase != .background, !ProcessInfo.isRunningForXcodePreviews, !ProcessInfo.isTakingScreenshots else {
                     return
                 }
 
@@ -30,18 +30,20 @@ private struct ReviewRequestModifier: ViewModifier {
                     firstLaunchTimestamp = Date.now.timeIntervalSince1970
                 }
 
+                // 待っている間にアプリを離れたら、頼むのをやめる
+                do {
+                    try await Task.sleep(for: ReviewRequestPolicy.delay)
+                } catch {
+                    return
+                }
+
+                // 複数のウインドウから重ねて頼まないよう、待ったあとで判定する
                 guard ReviewRequestPolicy.isEligible(
                     firstLaunchTimestamp: firstLaunchTimestamp,
                     itemCount: itemCount,
                     lastRequestedVersion: lastRequestedVersion,
                     currentVersion: currentVersion
                 ) else {
-                    return
-                }
-
-                do {
-                    try await Task.sleep(for: ReviewRequestPolicy.delay)
-                } catch {
                     return
                 }
 
